@@ -5,4 +5,4 @@ set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -g")
 
-add_executable(bfvm main.cpp src/ir.cpp src/ir.h src/bf.cpp src/bf.h src/lowering.cpp src/bf2ir.cpp src/bf2ir.h src/lowering.h src/constants.h src/ir_print.h src/ir_print.cpp src/opt.h src/opt/resolve_regs.cpp src/opt/validate.cpp src/opt/fold.cpp)
+add_executable(bfvm main.cc src/ir.cc src/ir.h src/bf.cc src/bf.h src/lowering.cc src/bf2ir.cc src/bf2ir.h src/lowering.h src/constants.h src/ir_print.h src/ir_print.cc src/opt.h src/opt/resolve_regs.cc src/opt/validate.cc src/opt/fold.cc)
