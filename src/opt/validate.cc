@@ -86,21 +86,20 @@ void Opt::validate(Graph *graph) {
           break;
         case I_PHI:
           assert(cur->inputs.size() == block->predecessors.size());
-          assert(cur->next == nullptr);
           break;
         case I_IF:
-          assert(cur->inputs.size() == 2);
+          assert(cur->inputs.size() == 1);
           assert(cur->next == nullptr);
           break;
         case I_GOTO:
           assert(cur->inputs.empty());
           assert(cur->next == nullptr);
-          assert(block->predecessors.size() == 1);
+          assert(block->successors.size() == 1);
           break;
         case I_RET:
           assert(cur->inputs.empty());
           assert(cur->next == nullptr);
-          assert(block->predecessors.empty());
+          assert(block->successors.empty());
           break;
       }
 
