@@ -163,8 +163,8 @@ std::string IR::printInst(Inst *inst) {
     case I_SUB: return inputStr(ctx, 0) + " - " + inputStr({inst, precedence.rhs}, 1);
     case I_LD: return "[" + inputStr(ctx, 0) + "]";
     case I_STR: return "[" + inputStr(ctx, 0) + "] <- " + inputStr(ctx, 1);
-    case I_REG: return regNames[inst->immValue];
-    case I_SETREG: return std::string(regNames[inst->immValue]) + " <- " + inputStr(ctx, 0);
+    case I_REG: return regNames[inst->immReg];
+    case I_SETREG: return std::string(regNames[inst->immReg]) + " <- " + inputStr(ctx, 0);
     case I_GETCHAR: return "getchar";
     case I_PUTCHAR: return "putchar " + inputStr(ctx, 0);
     case I_PHI: {

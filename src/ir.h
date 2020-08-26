@@ -2,8 +2,9 @@
 
 #include <vector>
 #include <set>
+#include <cassert>
 
-#include "constants.h"
+#include "common.h"
 
 namespace IR {
   enum RegKind {
@@ -29,6 +30,47 @@ namespace IR {
     I_GOTO,
     I_RET,
   };
+
+  typedef uint16_t TypeId;
+
+  enum BuiltinTypeId : TypeId {
+    T_INVALID,
+    T_NONE,
+    T_PTR,
+    T_I32,
+    T_I24,
+    T_I16,
+    T_I8,
+    T_USER_START,
+  };
+
+  const TypeId T_WORD = T_I8;
+  const TypeId T_LOW = T_I8;
+  const TypeId T_HI = T_PTR;
+
+  std::string typeString(TypeId type);
+
+  static bool minType(TypeId x, TypeId y) {
+    if (x == y) return x;
+    assert(x >= T_LOW && x <= T_HI);
+    assert(y >= T_LOW && y <= T_HI);
+    return x > y ? y : x;
+  }
+
+  static bool maxType(TypeId x, TypeId y) {
+    if (x == y) return x;
+    assert(x >= T_LOW && x <= T_HI);
+    assert(y >= T_LOW && y <= T_HI);
+    return x > y ? x : y;
+  }
+
+  static int immType(Constants::Imm value) {
+    unsigned int lz = Math::clz(value);
+    if (lz >= 24) return T_I8;
+    if (lz >= 16) return T_I16;
+    if (lz >= 8) return T_I24;
+    return T_I32;
+  }
 
   static bool instIsPure(InstKind kind) {
     switch (kind) {
@@ -67,6 +109,8 @@ namespace IR {
 
     int id;
 
+    TypeId type = T_NONE;
+
     Inst* prev = nullptr;
     Inst* next = nullptr;
 
@@ -79,7 +123,10 @@ namespace IR {
     std::vector<Inst*> inputs;
     std::vector<Inst*> outputs;
 
-    int64_t immValue = 0;
+    union {
+      Constants::Imm immValue;
+      RegKind immReg;
+    };
 
     void remove();
     void safeRemove();
@@ -114,7 +161,7 @@ namespace IR {
     void insertAfter(Inst *inst, Inst *after);
     void insertBefore(Inst *inst, Inst *before);
 
-    void addSuccessor(Block* successor);
+    void addSuccessor(Block *successor);
 
     [[nodiscard]] std::string getLabel() const;
   };
@@ -124,6 +171,8 @@ namespace IR {
     int nextInstId = 1;
 
     std::vector<Block*> blocks;
+
+    int orphanCount = 0;
 
     bool destroyed = false;
 
@@ -149,11 +198,11 @@ namespace IR {
     Inst *pushBinary(InstKind kind, Inst *x, Inst *y);
 
     Inst *pushNop() { return push(I_NOP); }
-    Inst *pushImm(Constants::Word imm);
-    Inst *pushAdd(Inst *x, Inst* y) { return pushBinary(I_ADD, x, y); }
-    Inst *pushSub(Inst *x, Inst* y) { return pushBinary(I_SUB, x, y); }
+    Inst *pushImm(Constants::Imm imm);
+    Inst *pushAdd(Inst *x, Inst *y) { return pushBinary(I_ADD, x, y); }
+    Inst *pushSub(Inst *x, Inst *y) { return pushBinary(I_SUB, x, y); }
     Inst *pushLd(Inst *x) { return pushUnary(I_LD, x); }
-    Inst *pushStr(Inst *x, Inst* y) { return pushBinary(I_STR, x, y); }
+    Inst *pushStr(Inst *x, Inst *y) { return pushBinary(I_STR, x, y); }
     Inst *pushReg(RegKind reg);
     Inst *pushSetReg(RegKind reg, Inst *x);
     Inst *pushGetchar() { return push(I_GETCHAR); }

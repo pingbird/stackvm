@@ -28,11 +28,11 @@ void Opt::resolveRegs(Graph *graph) {
       switch (inst->kind) {
         case I_SETREG:
           assert(inst->inputs.size() == 1);
-          state.states[inst->immValue] = inst->inputs[0];
+          state.states[inst->immReg] = inst->inputs[0];
           inst->safeDestroy();
           break;
         case I_REG: {
-          Inst *value = state.states[inst->immValue];
+          Inst *value = state.states[inst->immReg];
           if (value != nullptr) {
             Opt::validate(graph);
             inst->rewriteWith(value);

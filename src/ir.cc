@@ -4,6 +4,19 @@
 #include <string>
 #include <algorithm>
 
+std::string IR::typeString(TypeId type) {
+  switch (type) {
+    case T_INVALID: return "Invalid";
+    case T_PTR: return "Ptr";
+    case T_I32: return "I32";
+    case T_I24: return "I24";
+    case T_I16: return "I16";
+    case T_I8: return "I8";
+    default:
+      return "User" + std::to_string(type - T_USER_START);
+  }
+}
+
 const char *IR::regNames[1] = {
   "ptr",
 };
@@ -194,6 +207,7 @@ std::string IR::Block::getLabel() const {
 void IR::Block::remove() {
   assert(!orphan);
   orphan = true;
+  graph->orphanCount++;
   open = true;
 
   while (first != nullptr) {
@@ -250,7 +264,7 @@ IR::Inst *IR::Builder::push(
   return newInst;
 }
 
-IR::Inst *IR::Builder::pushImm(Constants::Word imm) {
+IR::Inst *IR::Builder::pushImm(Constants::Imm imm) {
   auto newInst = push(I_IMM);
   newInst->immValue = imm;
   return newInst;
@@ -312,12 +326,12 @@ IR::Inst* IR::Builder::closeBlock(
 
 IR::Inst *IR::Builder::pushReg(IR::RegKind reg) {
   auto newInst = push(I_REG);
-  newInst->immValue = reg;
+  newInst->immReg = reg;
   return newInst;
 }
 
 IR::Inst *IR::Builder::pushSetReg(IR::RegKind reg, IR::Inst *x) {
   auto newInst = pushUnary(I_SETREG, x);
-  newInst->immValue = reg;
+  newInst->immReg = reg;
   return newInst;
 }
