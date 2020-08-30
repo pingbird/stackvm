@@ -85,7 +85,7 @@ namespace IR {
       default:
         return false;
     }
-  };
+  }
 
   static bool instIsOrd(InstKind kind) {
     switch (kind) {
@@ -95,7 +95,7 @@ namespace IR {
       default:
         return false;
     }
-  };
+  }
 
   struct Block;
   struct Graph;
@@ -186,8 +186,8 @@ namespace IR {
     Block *block = nullptr;
     Inst *inst = nullptr;
 
-    void setBlock(Block* newBlock);
-    void setBlock(Block* newBlock, Inst* newInst);
+    void setBlock(Block *newBlock);
+    void setBlock(Block *newBlock, Inst *newInst);
 
     Inst *push(
       InstKind kind,
