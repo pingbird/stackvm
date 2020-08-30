@@ -118,10 +118,6 @@ struct LLVMBackend {
     module.setTargetTriple(machine->getTargetTriple().str());
     module.setDataLayout(machine->createDataLayout());
 
-    passManager.add(new llvm::TargetLibraryInfoWrapperPass(machine->getTargetTriple()));
-    passManager.add(llvm::createTargetTransformInfoWrapperPass(machine->getTargetIRAnalysis()));
-    functionPassManager.add(llvm::createTargetTransformInfoWrapperPass(machine->getTargetIRAnalysis()));
-
     addOptPasses();
     addLinkPasses();
 
@@ -156,6 +152,8 @@ struct LLVMBackend {
 
 void Backend::LLVM::compile(IR::Graph *graph) {
   LLVMInitializeNativeTarget();
-  LLVMBackend backend(llvm::EngineBuilder().selectTarget());
+  llvm::TargetMachine *targetMachine = llvm::EngineBuilder().selectTarget();
+  LLVMBackend backend(targetMachine);
   backend.helloWorld();
+  delete targetMachine;
 }
