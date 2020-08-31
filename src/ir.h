@@ -36,28 +36,27 @@ namespace IR {
   enum BuiltinTypeId : TypeId {
     T_INVALID,
     T_NONE,
-    T_PTR,
-    T_I32,
-    T_I24,
-    T_I16,
     T_I8,
+    T_I16,
+    T_I32,
+    T_I64,
     T_USER_START,
   };
 
   const TypeId T_WORD = T_I8;
   const TypeId T_LOW = T_I8;
-  const TypeId T_HI = T_PTR;
+  const TypeId T_HI = T_I64;
 
   std::string typeString(TypeId type);
 
-  static bool minType(TypeId x, TypeId y) {
+  static int minType(TypeId x, TypeId y) {
     if (x == y) return x;
     assert(x >= T_LOW && x <= T_HI);
     assert(y >= T_LOW && y <= T_HI);
     return x > y ? y : x;
   }
 
-  static bool maxType(TypeId x, TypeId y) {
+  static int maxType(TypeId x, TypeId y) {
     if (x == y) return x;
     assert(x >= T_LOW && x <= T_HI);
     assert(y >= T_LOW && y <= T_HI);
@@ -68,7 +67,6 @@ namespace IR {
     unsigned int lz = Math::clz(value);
     if (lz >= 24) return T_I8;
     if (lz >= 16) return T_I16;
-    if (lz >= 8) return T_I24;
     return T_I32;
   }
 
@@ -109,7 +107,7 @@ namespace IR {
 
     int id;
 
-    TypeId type = T_NONE;
+    TypeId type = T_INVALID;
 
     Inst* prev = nullptr;
     Inst* next = nullptr;
@@ -127,6 +125,8 @@ namespace IR {
       Constants::Imm immValue;
       RegKind immReg;
     };
+
+    void* passData = nullptr;
 
     void remove();
     void safeRemove();
@@ -157,6 +157,10 @@ namespace IR {
     std::vector<Block*> predecessors;
     std::vector<Block*> successors;
 
+    void* passData = nullptr;
+
+    void clearPassData();
+
     void remove();
     void insertAfter(Inst *inst, Inst *after);
     void insertBefore(Inst *inst, Inst *before);
@@ -175,6 +179,8 @@ namespace IR {
     int orphanCount = 0;
 
     bool destroyed = false;
+
+    void clearPassData();
 
     void destroy();
   };

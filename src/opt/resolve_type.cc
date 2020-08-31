@@ -29,10 +29,12 @@ static TypeId rawGetType(ResolutionState &state, Inst *inst) {
       if (ltype == T_INVALID) {
         return T_INVALID;
       }
+      assert(ltype != T_NONE);
       TypeId rtype = getType(state, inst->inputs[1]);
       if (rtype == T_INVALID) {
         return T_INVALID;
       }
+      assert(rtype != T_NONE);
       return maxType(ltype, rtype);
     } case I_LD:
     case I_GETCHAR:
@@ -40,7 +42,7 @@ static TypeId rawGetType(ResolutionState &state, Inst *inst) {
     case I_REG:
       switch (inst->immReg) {
         case R_PTR:
-          return T_PTR;
+          return T_I64;
       }
     case I_PHI: {
       if (state.phis.count(inst)) {
@@ -50,6 +52,7 @@ static TypeId rawGetType(ResolutionState &state, Inst *inst) {
       TypeId type = T_INVALID;
       for (Inst *input : inst->inputs) {
         TypeId inputType = getType(state, input);
+        assert(inputType != T_NONE);
         if (inputType == T_INVALID) continue;
         if (type == T_INVALID) {
           type = inputType;
@@ -67,10 +70,10 @@ static TypeId rawGetType(ResolutionState &state, Inst *inst) {
 }
 
 TypeId getType(ResolutionState &state, Inst *inst) {
-  if (inst->type != T_INVALID) {
-    return inst->type;
+  if (inst->type == T_INVALID) {
+    inst->type = rawGetType(state, inst);
   }
-  return inst->type = getType(state, inst);
+  return inst->type;
 }
 
 TypeId Opt::resolveType(Inst *inst) {

@@ -64,7 +64,7 @@ void JIT::Linker::removeModule(llvm::orc::VModuleKey key) {
   session.releaseVModule(key);
 }
 
-JIT::EntryFn JIT::Linker::findEntry(const std::string &name) {
+JIT::EntryFn JIT::Linker::findEntry(const std::string &name = "code") {
   auto symbol = compileLayer.findSymbol(mangle(name), true);
   assert(symbol);
   auto entryAddr = symbol.getAddress();
@@ -84,7 +84,7 @@ std::unique_ptr<JIT::Handle> JIT::Pipeline::compile(IR::Graph *graph) {
   return std::make_unique<JIT::Handle>(
     key,
     *this,
-    linker.findEntry("code")
+    linker.findEntry()
   );
 }
 

@@ -17,12 +17,17 @@ namespace Backend::LLVM {
 
     llvm::Type *intType;
     llvm::Type *voidType;
+    llvm::Type *voidPtrType;
+    llvm::Type *wordType;
+    llvm::Type *wordPtrType;
 
     llvm::FunctionType *putcharType;
     llvm::Function *putcharFunction;
 
     llvm::FunctionType *bfMainType;
     llvm::Function *bfMainFunction;
+
+    std::vector<IR::Inst*> pendingPhis;
 
     explicit ModuleCompiler(
       llvm::TargetMachine &machine,
@@ -32,6 +37,12 @@ namespace Backend::LLVM {
 
     void optimize();
     void callPutchar(int c);
+
+    llvm::Type *convertType(IR::TypeId typeId);
+
     void compileGraph(IR::Graph *graph);
+    void compileBlock(IR::Block *block);
+    llvm::Value *compileInst(IR::Inst *inst);
+    llvm::Value *getValue(IR::Inst *inst, llvm::Type *type = nullptr);
   };
 }

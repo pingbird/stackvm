@@ -4,12 +4,13 @@
 #include <string>
 #include <algorithm>
 
+using namespace IR;
+
 std::string IR::typeString(TypeId type) {
   switch (type) {
     case T_INVALID: return "Invalid";
-    case T_PTR: return "Ptr";
+    case T_I64: return "I64";
     case T_I32: return "I32";
-    case T_I24: return "I24";
     case T_I16: return "I16";
     case T_I8: return "I8";
     default:
@@ -21,7 +22,7 @@ const char *IR::regNames[1] = {
   "ptr",
 };
 
-void IR::Inst::remove() {
+void Inst::remove() {
   assert(mounted);
   mounted = false;
   if (prev == nullptr) {
@@ -72,33 +73,33 @@ void IR::Inst::remove() {
   block = nullptr;
 }
 
-void IR::Inst::safeRemove() {
+void Inst::safeRemove() {
   assert(outputs.empty());
   remove();
 }
 
-void IR::Inst::destroy() {
+void Inst::destroy() {
   if (mounted) {
     remove();
   }
   delete this;
 }
 
-void IR::Inst::safeDestroy() {
+void Inst::safeDestroy() {
   if (mounted) {
     safeRemove();
   }
   delete this;
 }
 
-void IR::Inst::replaceWith(Inst *inst) {
+void Inst::replaceWith(Inst *inst) {
   Block *oldBlock = block;
   Inst *oldPrev = prev;
   destroy();
   oldBlock->insertAfter(inst, oldPrev);
 }
 
-void IR::Inst::rewriteWith(Inst *inst) {
+void Inst::rewriteWith(Inst *inst) {
   for (Inst *output : outputs) {
     auto &i = output->inputs;
     std::replace(i.begin(), i.end(), this, inst);
@@ -108,7 +109,7 @@ void IR::Inst::rewriteWith(Inst *inst) {
   destroy();
 }
 
-void IR::Inst::insertAfter(IR::Inst *inst) {
+void Inst::insertAfter(Inst *inst) {
   assert(mounted);
   assert(!inst->mounted);
   inst->mounted = true;
@@ -124,7 +125,7 @@ void IR::Inst::insertAfter(IR::Inst *inst) {
   next = inst;
 }
 
-void IR::Inst::insertBefore(IR::Inst *inst) {
+void Inst::insertBefore(Inst *inst) {
   assert(mounted);
   assert(!inst->mounted);
   inst->mounted = true;
@@ -139,9 +140,9 @@ void IR::Inst::insertBefore(IR::Inst *inst) {
   prev = inst;
 }
 
-IR::Inst::Inst(
+Inst::Inst(
   Block *block,
-  IR::InstKind kind,
+  InstKind kind,
   const std::vector<Inst*> *inputs
 ) : kind(kind), block(block) {
   id = block->graph->nextInstId++;
@@ -153,12 +154,12 @@ IR::Inst::Inst(
   }
 }
 
-IR::Block::Block(Graph *graph) : graph(graph) {
+Block::Block(Graph *graph) : graph(graph) {
   id = graph->nextBlockId++;
   graph->blocks.push_back(this);
 }
 
-void IR::Block::insertAfter(IR::Inst *inst, IR::Inst *after) {
+void Block::insertAfter(Inst *inst, Inst *after) {
   assert(!orphan);
   assert(inst != nullptr);
   if (after == nullptr) {
@@ -176,7 +177,7 @@ void IR::Block::insertAfter(IR::Inst *inst, IR::Inst *after) {
   }
 }
 
-void IR::Block::insertBefore(IR::Inst *inst, IR::Inst *before) {
+void Block::insertBefore(Inst *inst, Inst *before) {
   assert(!orphan);
   assert(inst != nullptr);
   if (before == nullptr) {
@@ -194,17 +195,17 @@ void IR::Block::insertBefore(IR::Inst *inst, IR::Inst *before) {
   }
 }
 
-void IR::Block::addSuccessor(IR::Block *successor) {
+void Block::addSuccessor(Block *successor) {
   assert(!orphan);
   successors.push_back(successor);
   successor->predecessors.push_back(this);
 }
 
-std::string IR::Block::getLabel() const {
+std::string Block::getLabel() const {
   return std::string("l") + std::to_string(id);
 }
 
-void IR::Block::remove() {
+void Block::remove() {
   assert(!orphan);
   orphan = true;
   graph->orphanCount++;
@@ -241,7 +242,15 @@ void IR::Block::remove() {
   successors.clear();
 }
 
-void IR::Graph::destroy() {
+void Block::clearPassData() {
+  Inst *inst = first;
+  while (inst) {
+    inst->passData = nullptr;
+    inst = inst->next;
+  }
+}
+
+void Graph::destroy() {
   assert(!destroyed);
 
   for (Block *block : blocks) {
@@ -254,8 +263,15 @@ void IR::Graph::destroy() {
   destroyed = true;
 }
 
-IR::Inst *IR::Builder::push(
-  IR::InstKind kind,
+void Graph::clearPassData() {
+  for (Block *block : blocks) {
+    block->passData = nullptr;
+    block->clearPassData();
+  }
+}
+
+Inst *Builder::push(
+  InstKind kind,
   const std::vector<Inst*> *inputs
 ) {
   auto newInst = new Inst(block, kind, inputs);
@@ -264,50 +280,50 @@ IR::Inst *IR::Builder::push(
   return newInst;
 }
 
-IR::Inst *IR::Builder::pushImm(Constants::Imm imm) {
+Inst *Builder::pushImm(Constants::Imm imm) {
   auto newInst = push(I_IMM);
   newInst->immValue = imm;
   return newInst;
 }
 
-IR::Inst *IR::Builder::pushUnary(IR::InstKind kind, IR::Inst *x) {
+Inst *Builder::pushUnary(InstKind kind, Inst *x) {
   std::vector<Inst*> inputs = {x};
   return push(kind, &inputs);
 }
 
-IR::Inst *IR::Builder::pushBinary(IR::InstKind kind, IR::Inst *x, IR::Inst *y) {
+Inst *Builder::pushBinary(InstKind kind, Inst *x, Inst *y) {
   std::vector<Inst*> inputs = {x, y};
   return push(kind, &inputs);
 }
 
-IR::Inst *IR::Builder::pushIf(
-  IR::Inst *cond,
-  IR::Block *whenTrue,
-  IR::Block *whenFalse
+Inst *Builder::pushIf(
+  Inst *cond,
+  Block *whenTrue,
+  Block *whenFalse
 ) {
   std::vector<Block*> successors = {whenTrue, whenFalse};
   std::vector<Inst*> inputs = {cond};
   return closeBlock(I_IF, &inputs, &successors);
 }
 
-void IR::Builder::setBlock(Block* newBlock) {
+void Builder::setBlock(Block* newBlock) {
   block = newBlock;
   inst = block->last;
 }
 
-void IR::Builder::setBlock(IR::Block *newBlock, IR::Inst *newInst) {
+void Builder::setBlock(Block *newBlock, Inst *newInst) {
   block = newBlock;
   inst = newInst;
 }
 
-IR::Block *IR::Builder::openBlock() {
+Block *Builder::openBlock() {
   auto newBlock = new Block(graph);
   setBlock(newBlock);
   return newBlock;
 }
 
-IR::Inst* IR::Builder::closeBlock(
-  IR::InstKind kind,
+Inst* Builder::closeBlock(
+  InstKind kind,
   const std::vector<Inst*> *inputs,
   const std::vector<Block*> *successors
 ) {
@@ -324,13 +340,13 @@ IR::Inst* IR::Builder::closeBlock(
   return newInst;
 }
 
-IR::Inst *IR::Builder::pushReg(IR::RegKind reg) {
+Inst *Builder::pushReg(RegKind reg) {
   auto newInst = push(I_REG);
   newInst->immReg = reg;
   return newInst;
 }
 
-IR::Inst *IR::Builder::pushSetReg(IR::RegKind reg, IR::Inst *x) {
+Inst *Builder::pushSetReg(RegKind reg, Inst *x) {
   auto newInst = pushUnary(I_SETREG, x);
   newInst->immReg = reg;
   return newInst;
