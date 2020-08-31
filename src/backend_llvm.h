@@ -15,11 +15,13 @@ namespace Backend::LLVM {
     llvm::legacy::PassManager passManager;
     llvm::legacy::FunctionPassManager functionPassManager;
 
+    llvm::Type *addrType;
     llvm::Type *intType;
     llvm::Type *voidType;
     llvm::Type *voidPtrType;
     llvm::Type *wordType;
     llvm::Type *wordPtrType;
+    llvm::Type *boolType;
 
     llvm::FunctionType *putcharType;
     llvm::Function *putcharFunction;
@@ -36,7 +38,6 @@ namespace Backend::LLVM {
     );
 
     void optimize();
-    void callPutchar(int c);
 
     llvm::Type *convertType(IR::TypeId typeId);
 

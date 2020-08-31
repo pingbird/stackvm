@@ -6,6 +6,13 @@
 #include "src/opt.h"
 #include "src/jit.h"
 
+extern "C" {
+  int testPutchar(int c) {
+    std::cout << "char(" << std::to_string(c) << ")" << std::endl;
+    return 0;
+  }
+}
+
 int main() {
   auto program = BF::parse("-[>-<---]>-.");
 
@@ -29,10 +36,11 @@ int main() {
 
   JIT::init();
   JIT::Pipeline jit;
-  jit.addSymbol("native_putchar", putchar);
+  jit.addSymbol("native_putchar", testPutchar);
   auto handle = jit.compile(graph);
 
-  handle->entry(nullptr);
+  char memory[4096];
+  handle->entry(memory);
 
   graph->destroy();
   delete graph;

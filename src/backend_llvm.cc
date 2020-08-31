@@ -26,11 +26,13 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
   module(module),
   functionPassManager(&module)
 {
+  addrType = llvm::Type::getInt64Ty(context);
   intType = llvm::Type::getInt32Ty(context);
   voidType = llvm::Type::getVoidTy(context);
   voidPtrType = voidType->getPointerTo();
   wordType = llvm::Type::getInt8Ty(context);
   wordPtrType = wordType->getPointerTo();
+  boolType = llvm::Type::getInt1Ty(context);
 
   putcharType = llvm::FunctionType::get(
     intType,
@@ -110,13 +112,23 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph *graph) {
     auto phi = static_cast<llvm::PHINode*>(inst->passData);
     for (int i = 0; i < inst->inputs.size(); i++) {
       auto block = static_cast<llvm::BasicBlock*>(inst->block->predecessors[i]->passData);
-      auto value = static_cast<llvm::PHINode*>(inst->inputs[i]->passData);
+      auto value = static_cast<llvm::Value*>(inst->inputs[i]->passData);
       if (value->getType() != phi->getType()) {
-        std::cerr << "Phi input has wrong type.\ninput = %" + std::to_string(inst->inputs[i]->id) + "\ntype = " << std::endl;
-        value->getType()->print(llvm::errs());
-        std::cerr << "\nexpected = " << std::endl;
-        phi->getType()->print(llvm::errs());
-        abort();
+        auto inputInst = inst->inputs[i];
+        IR::TypeId phiType = Opt::resolveType(inst);
+        IR::TypeId inputType = Opt::resolveType(inputInst);
+        if (phiType == IR::maxType(phiType, inputType)) {
+          auto terminator = block->getTerminator();
+          assert(terminator);
+          builder.SetInsertPoint(terminator);
+          value = builder.CreateIntCast(value, phi->getType(), false);
+        } else {
+          std::cerr << "Phi input has wrong type.\ninput = %" + std::to_string(inst->inputs[i]->id) + "\ntype = " << std::endl;
+          value->getType()->print(llvm::errs());
+          std::cerr << "\nexpected = " << std::endl;
+          phi->getType()->print(llvm::errs());
+          abort();
+        }
       }
       phi->addIncoming(value, block);
     }
@@ -144,11 +156,13 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
     case IR::I_REG:
       switch (inst->immReg) {
         case IR::R_PTR:
-          return bfMainFunction->args().begin();
+          return builder.CreatePointerCast(
+            bfMainFunction->args().begin(),
+            addrType
+          );
+        default:
+          abort();
       }
-    case IR::I_SETREG:
-    case IR::I_GETCHAR:
-      assert(false);
     case IR::I_NOP:
     case IR::I_IMM:
       return llvm::ConstantInt::get(intType, inst->immValue);
@@ -167,29 +181,43 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
     } case IR::I_LD:
       return builder.CreateLoad(
         wordType,
-        getValue(inst->inputs[0])
+        builder.CreateIntToPtr(
+          getValue(inst->inputs[0]),
+          wordPtrType
+        )
       );
     case IR::I_STR:
       return builder.CreateStore(
         getValue(inst->inputs[1]),
-        builder.CreatePointerCast(
+        builder.CreateIntToPtr(
           getValue(inst->inputs[0]),
           wordPtrType
         )
       );
     case IR::I_PUTCHAR:
-      return builder.CreateCall(putcharFunction, {getValue(inst->inputs[0])});
+      return builder.CreateCall(putcharFunction, {
+        getValue(inst->inputs[0], intType)
+      });
     case IR::I_PHI: {
       pendingPhis.push_back(inst);
       auto typeId = Opt::resolveType(inst);
       assert(typeId != IR::T_NONE);
-      return builder.CreatePHI(
+      auto block = builder.GetInsertBlock();
+      if (!block->empty()) {
+        builder.SetInsertPoint(&block->getInstList().front());
+      }
+      auto phi = builder.CreatePHI(
         convertType(typeId),
         inst->inputs.size()
       );
+      builder.SetInsertPoint(block);
+      return phi;
     } case IR::I_IF:
       return builder.CreateCondBr(
-        getValue(inst->inputs[0]),
+        builder.CreateICmpNE(
+          getValue(inst->inputs[0], wordType),
+          llvm::ConstantInt::get(wordType, 0)
+        ),
         static_cast<llvm::BasicBlock*>(inst->block->successors[0]->passData),
         static_cast<llvm::BasicBlock*>(inst->block->successors[1]->passData)
       );
@@ -199,6 +227,9 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
       );
     case IR::I_RET:
       return builder.CreateRetVoid();
+    case IR::I_SETREG:
+    case IR::I_GETCHAR:
+      abort();
   }
 }
 
@@ -208,6 +239,9 @@ llvm::Value *Backend::LLVM::ModuleCompiler::getValue(IR::Inst *inst, llvm::Type 
     compileBlock(inst->block);
     value = static_cast<llvm::Value*>(inst->passData);
     assert(value != nullptr);
+  }
+  if (type != nullptr && value->getType() != type) {
+    value = builder.CreateIntCast(value, type, false);
   }
   return value;
 }
