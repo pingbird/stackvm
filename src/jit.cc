@@ -79,7 +79,7 @@ JIT::Pipeline::Pipeline() :
 std::unique_ptr<JIT::Handle> JIT::Pipeline::compile(IR::Graph *graph) {
   auto module = std::make_unique<llvm::Module>("bf", context);
   Backend::LLVM::ModuleCompiler moduleCompiler(*machine, context, *module);
-  moduleCompiler.helloWorld();
+  moduleCompiler.compileGraph(graph);
   auto key = linker.addModule(std::move(module));
   return std::make_unique<JIT::Handle>(
     key,

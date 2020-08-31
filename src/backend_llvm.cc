@@ -1,38 +1,16 @@
 #include <iostream>
 
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/ExecutionEngine/JITSymbol.h"
-#include "llvm/ExecutionEngine/Orc/CompileUtils.h"
-#include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
-#include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
-#include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
-#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
-#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
-#include "llvm/ExecutionEngine/RTDyldMemoryManager.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/BasicBlock.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
-#include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/IR/Mangler.h"
-#include "llvm/Passes/PassBuilder.h"
-#include "llvm/IR/Verifier.h"
-#include "llvm/Transforms/IPO.h"
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Target/TargetMachine.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/ExecutionEngine/ExecutionEngine.h"
-#include "llvm/Support/TargetRegistry.h"
-#include "llvm/Support/Host.h"
+#include <llvm/ExecutionEngine/ExecutionEngine.h>
+#include <llvm/ExecutionEngine/Orc/IndirectionUtils.h>
+#include <llvm/IR/Constants.h>
+#include <llvm/IR/IRBuilder.h>
+#include <llvm/IR/Verifier.h>
+#include <llvm/IR/Mangler.h>
+#include <llvm/Passes/PassBuilder.h>
+#include <llvm/Transforms/IPO.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#include <llvm/Support/TargetRegistry.h>
 
 #include "backend_llvm.h"
 
@@ -77,25 +55,23 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
   );
 }
 
-void Backend::LLVM::ModuleCompiler::addOptPasses() {
-  llvm::PassManagerBuilder managerBuilder;
-  managerBuilder.OptLevel = 2;
-  managerBuilder.SizeLevel = 0;
-  managerBuilder.Inliner = llvm::createFunctionInliningPass(2, 0, false);
-  managerBuilder.LoopVectorize = true;
-  managerBuilder.SLPVectorize = true;
-  machine.adjustPassManager(managerBuilder);
-  managerBuilder.populateFunctionPassManager(functionPassManager);
-  managerBuilder.populateModulePassManager(passManager);
-}
-
 void Backend::LLVM::ModuleCompiler::optimize() {
   if (verifyModule(module, &llvm::errs())) abort();
 
   module.setTargetTriple(machine.getTargetTriple().str());
   module.setDataLayout(machine.createDataLayout());
 
-  addOptPasses();
+  {
+    llvm::PassManagerBuilder managerBuilder;
+    managerBuilder.OptLevel = 2;
+    managerBuilder.SizeLevel = 0;
+    managerBuilder.Inliner = llvm::createFunctionInliningPass(2, 0, false);
+    managerBuilder.LoopVectorize = true;
+    managerBuilder.SLPVectorize = true;
+    machine.adjustPassManager(managerBuilder);
+    managerBuilder.populateFunctionPassManager(functionPassManager);
+    managerBuilder.populateModulePassManager(passManager);
+  }
 
   functionPassManager.doInitialization();
   for (llvm::Function &func : module) {
@@ -114,7 +90,7 @@ void Backend::LLVM::ModuleCompiler::callPutchar(int c) {
   });
 }
 
-void Backend::LLVM::ModuleCompiler::helloWorld() {
+void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph *graph) {
   llvm::BasicBlock *block = llvm::BasicBlock::Create(context, "code", bfMainFunction);
   builder.SetInsertPoint(block);
 

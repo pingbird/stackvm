@@ -4,6 +4,8 @@
 #include <llvm/IR/IRBuilder.h>
 #include <llvm/IR/LegacyPassManager.h>
 
+#include "ir.h"
+
 namespace Backend::LLVM {
   struct ModuleCompiler {
     llvm::TargetMachine &machine;
@@ -28,9 +30,8 @@ namespace Backend::LLVM {
       llvm::Module &module
     );
 
-    void addOptPasses();
     void optimize();
     void callPutchar(int c);
-    void helloWorld();
+    void compileGraph(IR::Graph *graph);
   };
 }

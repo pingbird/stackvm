@@ -9,7 +9,7 @@
 #include <llvm/ExecutionEngine/SectionMemoryManager.h>
 #include <llvm/ExecutionEngine/MCJIT.h>
 #include <llvm/ExecutionEngine/Orc/CompileUtils.h>
-#include "llvm/IR/Mangler.h"
+#include <llvm/IR/Mangler.h>
 
 #include "ir.h"
 #include "backend_llvm.h"
