@@ -4,7 +4,7 @@
 #include "src/lowering.h"
 #include "src/ir_print.h"
 #include "src/opt.h"
-#include "src/backend.h"
+#include "src/jit.h"
 
 int main() {
   auto program = BF::parse("-[>-<---]>-.");
@@ -27,7 +27,11 @@ int main() {
 
   std::cout << "----------------------------------------" << std::endl;
 
-  Backend::LLVM::compile(graph);
+  JIT::init();
+  JIT::Pipeline jit;
+  auto handle = jit.compile(graph);
+
+  handle->entry(nullptr);
 
   graph->destroy();
   delete graph;

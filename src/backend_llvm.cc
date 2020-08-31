@@ -21,6 +21,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Transforms/IPO.h"
@@ -33,127 +34,95 @@
 #include "llvm/Support/TargetRegistry.h"
 #include "llvm/Support/Host.h"
 
-#include "backend.h"
+#include "backend_llvm.h"
 
-struct LLVMBackend {
-  llvm::TargetMachine *machine;
-  llvm::LLVMContext context;
-  llvm::IRBuilder<> builder;
-  llvm::Module module;
-  llvm::legacy::PassManager passManager;
-  llvm::legacy::FunctionPassManager functionPassManager;
+Backend::LLVM::ModuleCompiler::ModuleCompiler(llvm::TargetMachine &machine, llvm::LLVMContext &context,
+                                              llvm::Module &module) :
+  machine(machine),
+  builder(context),
+  context(context),
+  module(module),
+  functionPassManager(&module) {
+  intType = llvm::Type::getInt32Ty(context);
+  voidType = llvm::Type::getVoidTy(context);
 
-  llvm::Type *intType;
-  llvm::Type *voidType;
+  putcharType = llvm::FunctionType::get(
+    intType,
+    {intType},
+    false
+  );
 
-  llvm::FunctionType *putcharType;
-  llvm::Function *putcharFunction;
+  putcharFunction = llvm::Function::Create(
+    putcharType,
+    llvm::Function::ExternalLinkage,
+    "putchar",
+    module
+  );
 
-  llvm::FunctionType *bfMainType;
-  llvm::Function *bfMainFunction;
+  bfMainType = llvm::FunctionType::get(
+    voidType,
+    {},
+    false
+  );
 
-  explicit LLVMBackend(llvm::TargetMachine *machine) :
-    machine(machine),
-    builder(context),
-    module("bf", context),
-    functionPassManager(&module) {
-    intType = llvm::Type::getInt32Ty(context);
-    voidType = llvm::Type::getVoidTy(context);
+  bfMainFunction = llvm::Function::Create(
+    bfMainType,
+    llvm::Function::ExternalLinkage,
+    "code",
+    module
+  );
+}
 
-    putcharType = llvm::FunctionType::get(
-      intType,
-      {intType},
-      false
-    );
+void Backend::LLVM::ModuleCompiler::addOptPasses() {
+  llvm::PassManagerBuilder managerBuilder;
+  managerBuilder.OptLevel = 2;
+  managerBuilder.SizeLevel = 0;
+  managerBuilder.Inliner = llvm::createFunctionInliningPass(2, 0, false);
+  managerBuilder.LoopVectorize = true;
+  managerBuilder.SLPVectorize = true;
+  machine.adjustPassManager(managerBuilder);
+  managerBuilder.populateFunctionPassManager(functionPassManager);
+  managerBuilder.populateModulePassManager(passManager);
+}
 
-    putcharFunction = llvm::Function::Create(
-      putcharType,
-      llvm::Function::ExternalLinkage,
-      "putchar",
-      module
-    );
+void Backend::LLVM::ModuleCompiler::optimize() {
+  if (verifyModule(module, &llvm::errs())) abort();
 
-    bfMainType = llvm::FunctionType::get(
-      voidType,
-      {},
-      false
-    );
+  module.setTargetTriple(machine.getTargetTriple().str());
+  module.setDataLayout(machine.createDataLayout());
 
-    bfMainFunction = llvm::Function::Create(
-      bfMainType,
-      llvm::Function::ExternalLinkage,
-      "bf_main",
-      module
-    );
+  addOptPasses();
+
+  functionPassManager.doInitialization();
+  for (llvm::Function &func : module) {
+    if (verifyFunction(func, &llvm::errs())) abort();
+    functionPassManager.run(func);
+  }
+  functionPassManager.doFinalization();
+
+  passManager.add(llvm::createVerifierPass());
+  passManager.run(module);
+}
+
+void Backend::LLVM::ModuleCompiler::callPutchar(int c) {
+  builder.CreateCall(putcharFunction, {
+    llvm::ConstantInt::get(intType, c)
+  });
+}
+
+void Backend::LLVM::ModuleCompiler::helloWorld() {
+  llvm::BasicBlock *block = llvm::BasicBlock::Create(context, "code", bfMainFunction);
+  builder.SetInsertPoint(block);
+
+  const char *hello = "Hello, World!\n";
+  while (*hello) {
+    callPutchar(*hello);
+    hello++;
   }
 
-  void callPutchar(int c) {
-    builder.CreateCall(putcharFunction, {
-      llvm::ConstantInt::get(intType, c)
-    });
-  }
+  builder.CreateRetVoid();
 
-  void addOptPasses() {
-    llvm::PassManagerBuilder managerBuilder;
-    managerBuilder.OptLevel = 2;
-    managerBuilder.SizeLevel = 0;
-    managerBuilder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
-    managerBuilder.LoopVectorize = true;
-    managerBuilder.SLPVectorize = true;
-    machine->adjustPassManager(managerBuilder);
-    managerBuilder.populateFunctionPassManager(functionPassManager);
-    managerBuilder.populateModulePassManager(passManager);
-  }
+  optimize();
 
-  void addLinkPasses() {
-    llvm::PassManagerBuilder managerBuilder;
-    managerBuilder.VerifyInput = true;
-    managerBuilder.Inliner = llvm::createFunctionInliningPass(3, 0, false);
-    managerBuilder.populateLTOPassManager(passManager);
-  }
-
-  void optimize() {
-    if (verifyModule(module, &llvm::errs())) abort();
-
-    module.setTargetTriple(machine->getTargetTriple().str());
-    module.setDataLayout(machine->createDataLayout());
-
-    addOptPasses();
-    addLinkPasses();
-
-    functionPassManager.doInitialization();
-    for (llvm::Function &func : module) {
-      if (verifyFunction(func, &llvm::errs())) abort();
-      functionPassManager.run(func);
-    }
-    functionPassManager.doFinalization();
-
-    passManager.add(llvm::createVerifierPass());
-    passManager.run(module);
-  }
-
-  void helloWorld() {
-    llvm::BasicBlock *block = llvm::BasicBlock::Create(context, "entry", bfMainFunction);
-    builder.SetInsertPoint(block);
-
-    const char *hello = "Hello, World!\n";
-    while (*hello) {
-      callPutchar(*hello);
-      hello++;
-    }
-
-    builder.CreateRetVoid();
-
-    optimize();
-
-    module.print(llvm::errs(), nullptr);
-  }
-};
-
-void Backend::LLVM::compile(IR::Graph *graph) {
-  LLVMInitializeNativeTarget();
-  llvm::TargetMachine *targetMachine = llvm::EngineBuilder().selectTarget();
-  LLVMBackend backend(targetMachine);
-  backend.helloWorld();
-  delete targetMachine;
+  module.print(llvm::errs(), nullptr);
 }
