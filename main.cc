@@ -29,6 +29,7 @@ int main() {
 
   JIT::init();
   JIT::Pipeline jit;
+  jit.addSymbol("native_putchar", putchar);
   auto handle = jit.compile(graph);
 
   handle->entry(nullptr);

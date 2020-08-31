@@ -27,6 +27,7 @@ namespace JIT {
     std::shared_ptr<llvm::orc::SymbolResolver> resolver;
     llvm::orc::LegacyRTDyldObjectLinkingLayer objectLayer;
     llvm::orc::LegacyIRCompileLayer<decltype(objectLayer), llvm::orc::SimpleCompiler> compileLayer;
+    std::unordered_map<std::string, llvm::JITTargetAddress> symbols;
 
     Linker(
       llvm::TargetMachine &machine,
@@ -58,10 +59,14 @@ namespace JIT {
   struct Pipeline {
     std::unique_ptr<llvm::TargetMachine> machine;
     llvm::LLVMContext context;
-    Linker backend;
+    Linker linker;
 
     Pipeline();
 
     std::unique_ptr<JIT::Handle> compile(IR::Graph *graph);
+
+    template<typename T> void addSymbol(const std::string& name, T *pointer) {
+      linker.symbols[name] = llvm::pointerToJITTargetAddress(pointer);
+    }
   };
 }

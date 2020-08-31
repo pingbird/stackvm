@@ -21,6 +21,8 @@ JIT::Linker::Linker(llvm::TargetMachine &machine, llvm::LLVMContext &context) :
         return std::move(error);
       } if (auto address = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name)) {
         return llvm::JITSymbol(address, llvm::JITSymbolFlags::Exported);
+      } else if (symbols.count(name)) {
+        return llvm::JITSymbol(symbols[name], llvm::JITSymbolFlags::Exported);
       } else {
         return llvm::JITSymbol(nullptr);
       }
@@ -72,17 +74,17 @@ JIT::EntryFn JIT::Linker::findEntry(const std::string &name) {
 
 JIT::Pipeline::Pipeline() :
   machine(llvm::EngineBuilder().selectTarget()),
-  backend(*machine, context) {}
+  linker(*machine, context) {}
 
 std::unique_ptr<JIT::Handle> JIT::Pipeline::compile(IR::Graph *graph) {
   auto module = std::make_unique<llvm::Module>("bf", context);
   Backend::LLVM::ModuleCompiler moduleCompiler(*machine, context, *module);
   moduleCompiler.helloWorld();
-  auto key = backend.addModule(std::move(module));
+  auto key = linker.addModule(std::move(module));
   return std::make_unique<JIT::Handle>(
     key,
     *this,
-    backend.findEntry("code")
+    linker.findEntry("code")
   );
 }
 
@@ -96,5 +98,5 @@ JIT::Handle::Handle(
   entry(entry) {}
 
 JIT::Handle::~Handle() {
-  pipeline.backend.removeModule(key);
+  pipeline.linker.removeModule(key);
 }

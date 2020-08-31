@@ -36,13 +36,17 @@
 
 #include "backend_llvm.h"
 
-Backend::LLVM::ModuleCompiler::ModuleCompiler(llvm::TargetMachine &machine, llvm::LLVMContext &context,
-                                              llvm::Module &module) :
+Backend::LLVM::ModuleCompiler::ModuleCompiler(
+  llvm::TargetMachine &machine,
+  llvm::LLVMContext &context,
+  llvm::Module &module
+) :
   machine(machine),
   builder(context),
   context(context),
   module(module),
-  functionPassManager(&module) {
+  functionPassManager(&module)
+{
   intType = llvm::Type::getInt32Ty(context);
   voidType = llvm::Type::getVoidTy(context);
 
@@ -55,7 +59,7 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(llvm::TargetMachine &machine, llvm
   putcharFunction = llvm::Function::Create(
     putcharType,
     llvm::Function::ExternalLinkage,
-    "putchar",
+    "native_putchar",
     module
   );
 
