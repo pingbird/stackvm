@@ -47,6 +47,19 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
     module
   );
 
+  getcharType = llvm::FunctionType::get(
+    intType,
+    {},
+    false
+  );
+
+  getcharFunction = llvm::Function::Create(
+    getcharType,
+    llvm::Function::ExternalLinkage,
+    "native_getchar",
+    module
+  );
+
   bfMainType = llvm::FunctionType::get(
     intType,
     {wordPtrType},
@@ -205,6 +218,12 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
       return builder.CreateCall(putcharFunction, {
         getValue(inst->inputs[0], intType)
       });
+    case IR::I_GETCHAR:
+      return builder.CreateIntCast(
+        builder.CreateCall(getcharFunction, {}),
+        wordType,
+        false
+      );
     case IR::I_PHI: {
       pendingPhis.push_back(inst);
       auto typeId = Opt::resolveType(inst);

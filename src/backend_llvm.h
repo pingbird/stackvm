@@ -36,6 +36,9 @@ namespace Backend::LLVM {
     llvm::FunctionType *putcharType;
     llvm::Function *putcharFunction;
 
+    llvm::FunctionType *getcharType;
+    llvm::Function *getcharFunction;
+
     llvm::FunctionType *bfMainType;
     llvm::Function *bfMainFunction;
 

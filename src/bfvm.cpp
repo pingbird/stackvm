@@ -61,6 +61,15 @@ struct CommandLineDiag : Diag {
 };
 #endif
 
+int nativeGetchar() {
+  int c = getchar();
+  return c == -1 ? 0 : c;
+}
+
+void nativePutchar(int x) {
+  putchar(x);
+}
+
 void BFVM::run(const std::string &code, const Config &config) {
 #ifndef NDIAG
   auto diag = new CommandLineDiag(config);
@@ -72,8 +81,8 @@ void BFVM::run(const std::string &code, const Config &config) {
   std::filesystem::remove_all(config.artifactsDir);
   assert(std::filesystem::create_directory(config.artifactsDir));
 #endif
-  DIAG(eventStart, "No-op")
-  DIAG(eventFinish, "No-op")
+  DIAG(eventStart, "No-op baseline")
+  DIAG(eventFinish, "No-op baseline")
 
   DIAG(eventStart, "Build")
 
@@ -102,7 +111,8 @@ void BFVM::run(const std::string &code, const Config &config) {
   JIT::init();
   JIT::Pipeline jit;
   DIAG_FWD(jit)
-  jit.addSymbol("native_putchar", putchar);
+  jit.addSymbol("native_putchar", nativePutchar);
+  jit.addSymbol("native_getchar", nativeGetchar);
 
   auto handle = jit.compile(graph);
   graph->destroy();
