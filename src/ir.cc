@@ -280,7 +280,7 @@ Inst *Builder::push(
   return newInst;
 }
 
-Inst *Builder::pushImm(Constants::Imm imm) {
+Inst *Builder::pushImm(uint32_t imm) {
   auto newInst = push(I_IMM);
   newInst->immValue = imm;
   return newInst;

@@ -10,6 +10,7 @@
 #include "lowering.h"
 #include "opt.h"
 #include "jit.h"
+#include "memory.h"
 
 #ifndef NDIAG
 struct CommandLineDiag : Diag {
@@ -121,8 +122,10 @@ void BFVM::run(const std::string &code, const Config &config) {
 
   DIAG(eventStart, "Run")
 
-  char memory[4096] = {0};
-  handle->entry(memory);
+  Memory::Config tapeConfig;
+  Memory::Tape tape(tapeConfig);
+
+  handle->entry(static_cast<char*>(tape.base));
 
   DIAG(eventFinish, "Run")
 

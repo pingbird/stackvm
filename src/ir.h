@@ -4,7 +4,7 @@
 #include <set>
 #include <cassert>
 
-#include "common.h"
+#include "math_util.h"
 
 namespace IR {
   enum RegKind {
@@ -63,7 +63,7 @@ namespace IR {
     return x > y ? x : y;
   }
 
-  static int immType(Constants::Imm value) {
+  static int immType(uint32_t value) {
     unsigned int lz = Math::clz(value);
     if (lz >= 24) return T_I8;
     if (lz >= 16) return T_I16;
@@ -122,7 +122,7 @@ namespace IR {
     std::vector<Inst*> outputs;
 
     union {
-      Constants::Imm immValue;
+      uint32_t immValue;
       RegKind immReg;
     };
 
@@ -204,7 +204,7 @@ namespace IR {
     Inst *pushBinary(InstKind kind, Inst *x, Inst *y);
 
     Inst *pushNop() { return push(I_NOP); }
-    Inst *pushImm(Constants::Imm imm);
+    Inst *pushImm(uint32_t imm);
     Inst *pushAdd(Inst *x, Inst *y) { return pushBinary(I_ADD, x, y); }
     Inst *pushSub(Inst *x, Inst *y) { return pushBinary(I_SUB, x, y); }
     Inst *pushLd(Inst *x) { return pushUnary(I_LD, x); }

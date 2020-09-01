@@ -16,10 +16,3 @@ namespace Math {
   }
 #endif
 }
-
-namespace Constants {
-  const unsigned int wordBits = 8;
-  const unsigned int wordMax = (1u << wordBits) - 1;
-  typedef uint8_t Word;
-  typedef uint32_t Imm;
-}
