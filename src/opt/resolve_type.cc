@@ -61,7 +61,6 @@ static TypeId rawGetType(ResolutionState &state, Inst *inst) {
         }
       }
       state.phis.erase(inst);
-      assert(type != T_INVALID);
       return type;
     } default:
       assert(false);

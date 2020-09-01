@@ -67,9 +67,21 @@ void Opt::resolveRegs(Graph *graph) {
       value = builder.pushReg(reg);
     }
 
-    if (!block->predecessors.empty()) {
-      std::vector<Inst *> inputs;
+    Inst *phi = nullptr;
 
+    if (!block->predecessors.empty()) {
+      Inst *oldValue = value;
+      builder.setBlock(block, nullptr);
+      value = (phi = builder.pushPhi());
+      oldValue->rewriteWith(value);
+    }
+
+    if (state.states[reg] == nullptr) {
+      assert((unsigned int)value->kind <= I_RET);
+      state.states[reg] = value;
+    }
+
+    if (phi) {
       for (Block *pred : block->predecessors) {
         auto &pstate = states[pred];
         Inst *resolved = pstate.states[reg];
@@ -77,22 +89,9 @@ void Opt::resolveRegs(Graph *graph) {
           resolved = resolve(pred, reg);
           assert(resolved->id > 0);
         }
-        inputs.push_back(resolved);
+        phi->inputs.push_back(resolved);
+        resolved->outputs.push_back(phi);
       }
-
-      Inst *oldValue = value;
-      if (inputs.size() == 1) {
-        value = inputs[0];
-      } else {
-        builder.setBlock(block, nullptr);
-        value = builder.pushPhi(&inputs);
-      }
-      oldValue->rewriteWith(value);
-    }
-
-    if (state.states[reg] == nullptr) {
-      assert((unsigned int)value->kind <= I_RET);
-      state.states[reg] = value;
     }
 
     return value;

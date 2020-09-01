@@ -97,7 +97,7 @@ struct Builder {
   void buildProgram() {
     b.openBlock();
     buildBody();
-    b.pushRet();
+    b.pushRet(b.pushReg(IR::R_PTR));
     assert(pos == program->size());
   }
 };

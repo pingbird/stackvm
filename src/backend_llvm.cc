@@ -48,7 +48,7 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
   );
 
   bfMainType = llvm::FunctionType::get(
-    voidType,
+    intType,
     {wordPtrType},
     false
   );
@@ -226,9 +226,8 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
         static_cast<llvm::BasicBlock*>(inst->block->successors[0]->passData)
       );
     case IR::I_RET:
-      return builder.CreateRetVoid();
-    case IR::I_SETREG:
-    case IR::I_GETCHAR:
+      return builder.CreateRet(llvm::ConstantInt::get(intType, 69));
+    default:
       abort();
   }
 }

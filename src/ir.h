@@ -213,7 +213,7 @@ namespace IR {
     Inst *pushSetReg(RegKind reg, Inst *x);
     Inst *pushGetchar() { return push(I_GETCHAR); }
     Inst *pushPutchar(Inst *x) { return pushUnary(I_PUTCHAR, x); }
-    Inst *pushPhi(const std::vector<Inst*> *inputs) { return push(I_PHI, inputs); }
+    Inst *pushPhi(const std::vector<Inst*> *inputs = nullptr) { return push(I_PHI, inputs); }
 
     Inst *pushLdPtr() { return pushLd(pushReg(R_PTR)); }
     Inst *pushStrPtr(Inst *x) { return pushStr(pushReg(R_PTR), x); }
@@ -237,6 +237,9 @@ namespace IR {
       return closeBlock(I_GOTO, nullptr, &successors);
     }
 
-    Inst *pushRet() { return closeBlock(I_RET); }
+    Inst *pushRet(Inst *x) {
+      std::vector<Inst*> inputs = {x};
+      return closeBlock(I_RET, &inputs);
+    }
   };
 }

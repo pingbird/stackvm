@@ -14,7 +14,7 @@ extern "C" {
 }
 
 int main() {
-  auto program = BF::parse("-[>-<---]>-.");
+  auto program = BF::parse("-[-]>-.");
 
   std::cout << BF::print(program) << std::endl;
 

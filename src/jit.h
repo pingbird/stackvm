@@ -17,7 +17,7 @@
 namespace JIT {
   void init();
 
-  typedef void (*EntryFn)(void*);
+  typedef char* (*EntryFn)(char*);
 
   struct Linker {
     llvm::TargetMachine &machine;

@@ -97,7 +97,7 @@ void Opt::validate(Graph *graph) {
           assert(block->successors.size() == 1);
           break;
         case I_RET:
-          assert(cur->inputs.empty());
+          assert(cur->inputs.size() == 1);
           assert(cur->next == nullptr);
           assert(block->successors.empty());
           break;
