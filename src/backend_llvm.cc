@@ -93,7 +93,7 @@ void Backend::LLVM::ModuleCompiler::optimize() {
 void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph *graph) {
   graph->clearPassData();
 
-  DIAG(eventStart, "Translate BFVM IR to LLVM IR")
+  DIAG(eventStart, "Translate")
 
   int numBlocks = graph->blocks.size();
   for (int b = 0; b < numBlocks; b++) {
@@ -137,14 +137,14 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph *graph) {
     }
   }
 
-  DIAG(eventFinish, "Translate BFVM IR to LLVM IR")
+  DIAG(eventFinish, "Translate")
 
   DIAG_ARTIFACT("llvm_ir_unopt.txt", printRaw(module))
-  DIAG(eventStart, "Optimize LLVM IR")
+  DIAG(eventStart, "Optimize LLVM")
 
   optimize();
 
-  DIAG(eventFinish, "Optimize LLVM IR")
+  DIAG(eventFinish, "Optimize LLVM")
   DIAG_ARTIFACT("llvm_ir_opt.txt", printRaw(module))
 }
 
@@ -266,5 +266,6 @@ llvm::Type *Backend::LLVM::ModuleCompiler::convertType(IR::TypeId typeId) {
       return llvm::Type::getInt64Ty(context);
     default:
       assert(false);
+      return nullptr;
   }
 }

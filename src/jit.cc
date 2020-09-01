@@ -54,8 +54,13 @@ std::string JIT::Linker::mangle(const std::string &name) {
 }
 
 llvm::orc::VModuleKey JIT::Linker::addModule(unique_ptr<llvm::Module> module) {
+  DIAG(eventStart, "Compile");
+
   auto key = session.allocateVModule();
   cantFail(compileLayer.addModule(key, std::move(module)));
+
+  DIAG(eventFinish, "Compile");
+
   return key;
 }
 
@@ -74,14 +79,14 @@ JIT::EntryFn JIT::Linker::findEntry(const std::string &name = "code") {
 
 JIT::Pipeline::Pipeline() :
   machine(llvm::EngineBuilder().selectTarget()),
-  linker(*machine, context) {
-  DIAG_FWD(&linker)
-}
+  linker(*machine, context) {}
 
 std::unique_ptr<JIT::Handle> JIT::Pipeline::compile(IR::Graph *graph) {
   auto module = std::make_unique<llvm::Module>("bf", context);
   Backend::LLVM::ModuleCompiler moduleCompiler(*machine, context, *module);
+  DIAG_FWD(moduleCompiler)
   moduleCompiler.compileGraph(graph);
+  DIAG_FWD(linker)
   auto key = linker.addModule(std::move(module));
   return std::make_unique<JIT::Handle>(
     key,

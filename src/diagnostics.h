@@ -16,7 +16,7 @@ struct Diag {
 };
 
 #define DIAG(m, ...) if (diag) diag->m(__VA_ARGS__);
-#define DIAG_FWD(x) if (diag) (x)->diag = diag;
+#define DIAG_FWD(x) if (diag) (x).diag = diag;
 #define DIAG_DECL() Diag* diag = nullptr;
 #define DIAG_ARTIFACT(n, c) DIAG(artifact, n, [&]() { return c; })
 
@@ -27,3 +27,13 @@ struct Diag {
 #define DIAG_DECL()
 
 #endif
+
+namespace Time {
+  const uint64_t nanosecond = 1;
+  const uint64_t microsecond = nanosecond * 1000;
+  const uint64_t millisecond = microsecond * 1000;
+  const uint64_t second = millisecond * 1000;
+
+  int64_t getTime();
+  std::string printTime(int64_t ns, int64_t precision = second);
+}
