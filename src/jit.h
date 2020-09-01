@@ -21,6 +21,7 @@ namespace JIT {
   typedef char* (*EntryFn)(char*);
 
   struct Linker {
+    const BFVM::Config &config;
     llvm::TargetMachine &machine;
     const llvm::DataLayout dataLayout;
     llvm::LLVMContext &context;
@@ -33,6 +34,7 @@ namespace JIT {
     DIAG_DECL()
 
     Linker(
+      const BFVM::Config &config,
       llvm::TargetMachine &machine,
       llvm::LLVMContext &context
     );
@@ -60,13 +62,14 @@ namespace JIT {
   };
 
   struct Pipeline {
+    const BFVM::Config &config;
     std::unique_ptr<llvm::TargetMachine> machine;
     llvm::LLVMContext context;
     Linker linker;
 
     DIAG_DECL()
 
-    Pipeline();
+    explicit Pipeline(const BFVM::Config &config);
 
     std::unique_ptr<JIT::Handle> compile(IR::Graph *graph);
 

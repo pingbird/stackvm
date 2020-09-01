@@ -6,11 +6,13 @@
 #include "lowering.h"
 
 struct Builder {
-  explicit Builder(const std::vector<BF::Inst> *program) :
+  explicit Builder(const BFVM::Config &config, const std::vector<BF::Inst> *program) :
+    config(config),
     program(program),
-    graph(new IR::Graph()),
-    b(IR::Builder(graph)) {}
+    graph(new IR::Graph(config)),
+    b(graph) {}
 
+  const BFVM::Config &config;
   const std::vector<BF::Inst> *program;
   IR::Graph* graph;
   IR::Builder b;
@@ -44,18 +46,18 @@ struct Builder {
         } case BF::I_LEFT:
           b.pushSetReg(
             IR::R_PTR,
-            b.pushSub(
+            b.pushGep(
               b.pushReg(IR::R_PTR),
-              b.pushImm(1)
+              b.pushImm(1, IR::T_PTR)
             )
           );
           break;
         case BF::I_RIGHT:
           b.pushSetReg(
             IR::R_PTR,
-            b.pushAdd(
+            b.pushGep(
               b.pushReg(IR::R_PTR),
-              b.pushImm(1)
+              b.pushImm(-1, IR::T_PTR)
             )
           );
           break;
@@ -102,8 +104,8 @@ struct Builder {
   }
 };
 
-IR::Graph *Lowering::buildProgram(const std::vector<BF::Inst> *program) {
-  auto builder = Builder(program);
+IR::Graph *Lowering::buildProgram(const BFVM::Config &config, const std::vector<BF::Inst> *program) {
+  auto builder = Builder(config, program);
   builder.buildProgram();
   return builder.graph;
 }

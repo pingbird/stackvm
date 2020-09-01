@@ -9,6 +9,8 @@ using namespace IR;
 std::string IR::typeString(TypeId type) {
   switch (type) {
     case T_INVALID: return "Invalid";
+    case T_NONE: return "None";
+    case T_PTR: return "Ptr";
     case T_I64: return "I64";
     case T_I32: return "I32";
     case T_I16: return "I16";
@@ -270,6 +272,10 @@ void Graph::clearPassData() {
   }
 }
 
+Graph::Graph(const BFVM::Config &config) : config(config) {}
+
+Builder::Builder(Graph *graph) : config(graph->config), graph(graph) {}
+
 Inst *Builder::push(
   InstKind kind,
   const std::vector<Inst*> *inputs
@@ -280,8 +286,12 @@ Inst *Builder::push(
   return newInst;
 }
 
-Inst *Builder::pushImm(uint32_t imm) {
+Inst *Builder::pushImm(int64_t imm, TypeId typeId) {
   auto newInst = push(I_IMM);
+  if (typeId == T_INVALID) {
+    typeId = typeForSize(graph->config.cellSize);
+  }
+  newInst->type = typeId;
   newInst->immValue = imm;
   return newInst;
 }

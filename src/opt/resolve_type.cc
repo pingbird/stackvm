@@ -22,7 +22,7 @@ static TypeId rawGetType(ResolutionState &state, Inst *inst) {
     case I_STR:
       return T_NONE;
     case I_IMM:
-      return immType(inst->immValue);
+      abort(); // Given type by builder
     case I_ADD:
     case I_SUB: {
       TypeId ltype = getType(state, inst->inputs[0]);
@@ -36,13 +36,15 @@ static TypeId rawGetType(ResolutionState &state, Inst *inst) {
       }
       assert(rtype != T_NONE);
       return maxType(ltype, rtype);
-    } case I_LD:
+    } case I_GEP:
+      return T_PTR;
+    case I_LD:
     case I_GETCHAR:
-      return T_WORD;
+      return typeForSize(inst->block->graph->config.cellSize);
     case I_REG:
       switch (inst->immReg) {
         case R_PTR:
-          return T_I64;
+          return T_PTR;
       }
     case I_PHI: {
       if (state.phis.count(inst)) {
@@ -62,10 +64,9 @@ static TypeId rawGetType(ResolutionState &state, Inst *inst) {
       }
       state.phis.erase(inst);
       return type;
-    } default:
-      assert(false);
-      return T_INVALID;
+    }
   }
+  abort();
 }
 
 TypeId getType(ResolutionState &state, Inst *inst) {

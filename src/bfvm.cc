@@ -94,7 +94,7 @@ void BFVM::run(const std::string &code, const Config &config) {
   DIAG_ARTIFACT("bf.txt", BF::print(program))
 
   DIAG(eventStart, "Lower")
-  auto graph = Lowering::buildProgram(&program);
+  auto graph = Lowering::buildProgram(config, &program);
   Opt::validate(graph);
   DIAG(eventFinish, "Lower")
 
@@ -110,7 +110,7 @@ void BFVM::run(const std::string &code, const Config &config) {
   DIAG(event, "JIT Initialization")
 
   JIT::init();
-  JIT::Pipeline jit;
+  JIT::Pipeline jit(config);
   DIAG_FWD(jit)
   jit.addSymbol("native_putchar", nativePutchar);
   jit.addSymbol("native_getchar", nativeGetchar);

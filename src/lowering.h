@@ -6,5 +6,5 @@
 #include "bf.h"
 
 namespace Lowering {
-  IR::Graph *buildProgram(const std::vector<BF::Inst> *program);
+  IR::Graph *buildProgram(const BFVM::Config &config, const std::vector<BF::Inst> *program);
 }

@@ -16,22 +16,25 @@
 #include "opt.h"
 
 Backend::LLVM::ModuleCompiler::ModuleCompiler(
+  const BFVM::Config &config,
   llvm::TargetMachine &machine,
   llvm::LLVMContext &context,
   llvm::Module &module
 ) :
+  config(config),
   machine(machine),
   builder(context),
   context(context),
   module(module),
   functionPassManager(&module)
 {
-  addrType = llvm::Type::getInt64Ty(context);
   intType = llvm::Type::getInt32Ty(context);
   voidType = llvm::Type::getVoidTy(context);
   voidPtrType = voidType->getPointerTo();
-  wordType = llvm::Type::getInt8Ty(context);
-  wordPtrType = wordType->getPointerTo();
+
+  cellType = convertType(IR::typeForSize(config.cellSize));
+  cellPtrType = cellType->getPointerTo();
+
   boolType = llvm::Type::getInt1Ty(context);
 
   putcharType = llvm::FunctionType::get(
@@ -62,7 +65,7 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
 
   bfMainType = llvm::FunctionType::get(
     intType,
-    {wordPtrType},
+    {cellPtrType},
     false
   );
 
@@ -178,11 +181,13 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
         case IR::R_PTR:
           return builder.CreatePointerCast(
             bfMainFunction->args().begin(),
-            addrType
+            cellPtrType
           );
         default:
           abort();
       }
+    case IR::I_SETREG:
+      abort();
     case IR::I_NOP:
     case IR::I_IMM:
       return llvm::ConstantInt::get(intType, inst->immValue);
@@ -198,12 +203,17 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
         getValue(inst->inputs[0], type),
         getValue(inst->inputs[1], type)
       );
-    } case IR::I_LD:
+    } case IR::I_GEP:
+      return builder.CreateGEP(
+        getValue(inst->inputs[0]),
+        getValue(inst->inputs[1])
+      );
+    case IR::I_LD:
       return builder.CreateLoad(
-        wordType,
+        cellType,
         builder.CreateIntToPtr(
           getValue(inst->inputs[0]),
-          wordPtrType
+          cellPtrType
         )
       );
     case IR::I_STR:
@@ -211,7 +221,7 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
         getValue(inst->inputs[1]),
         builder.CreateIntToPtr(
           getValue(inst->inputs[0]),
-          wordPtrType
+          cellPtrType
         )
       );
     case IR::I_PUTCHAR:
@@ -221,7 +231,7 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
     case IR::I_GETCHAR:
       return builder.CreateIntCast(
         builder.CreateCall(getcharFunction, {}),
-        wordType,
+        cellType,
         false
       );
     case IR::I_PHI: {
@@ -241,8 +251,8 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
     } case IR::I_IF:
       return builder.CreateCondBr(
         builder.CreateICmpNE(
-          getValue(inst->inputs[0], wordType),
-          llvm::ConstantInt::get(wordType, 0)
+          getValue(inst->inputs[0], cellType),
+          llvm::ConstantInt::get(cellType, 0)
         ),
         static_cast<llvm::BasicBlock*>(inst->block->successors[0]->passData),
         static_cast<llvm::BasicBlock*>(inst->block->successors[1]->passData)
@@ -253,9 +263,8 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
       );
     case IR::I_RET:
       return builder.CreateRet(llvm::ConstantInt::get(intType, 69));
-    default:
-      abort();
   }
+  abort();
 }
 
 llvm::Value *Backend::LLVM::ModuleCompiler::getValue(IR::Inst *inst, llvm::Type *type) {
@@ -275,6 +284,8 @@ llvm::Type *Backend::LLVM::ModuleCompiler::convertType(IR::TypeId typeId) {
   switch (typeId) {
     case IR::T_NONE:
       return voidType;
+    case IR::T_PTR:
+      return cellPtrType;
     case IR::T_I8:
       return llvm::Type::getInt8Ty(context);
     case IR::T_I16:

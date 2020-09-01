@@ -3,8 +3,7 @@
 #include <vector>
 #include <set>
 #include <cassert>
-
-#include "math_util.h"
+#include "bfvm.h"
 
 namespace IR {
   enum RegKind {
@@ -19,6 +18,7 @@ namespace IR {
     I_IMM,
     I_ADD,
     I_SUB,
+    I_GEP,
     I_LD,
     I_STR,
     I_REG,
@@ -36,6 +36,7 @@ namespace IR {
   enum BuiltinTypeId : TypeId {
     T_INVALID,
     T_NONE,
+    T_PTR,
     T_I8,
     T_I16,
     T_I32,
@@ -43,11 +44,25 @@ namespace IR {
     T_USER_START,
   };
 
-  const TypeId T_WORD = T_I8;
   const TypeId T_LOW = T_I8;
   const TypeId T_HI = T_I64;
 
   std::string typeString(TypeId type);
+
+  static TypeId typeForSize(int size) {
+    switch (size) {
+      case 1:
+        return T_I8;
+      case 2:
+        return T_I16;
+      case 4:
+        return T_I32;
+      case 8:
+        return T_I64;
+      default:
+        abort();
+    }
+  }
 
   static int minType(TypeId x, TypeId y) {
     if (x == y) return x;
@@ -63,11 +78,12 @@ namespace IR {
     return x > y ? x : y;
   }
 
-  static int immType(uint32_t value) {
-    unsigned int lz = Math::clz(value);
-    if (lz >= 24) return T_I8;
-    if (lz >= 16) return T_I16;
-    return T_I32;
+  static int immType(int64_t value) {
+    uint64_t uvalue = value;
+    if ((int8_t)(uvalue & 0xFFu) == value) return T_I8;
+    if ((int8_t)(uvalue & 0xFFFFu) == value) return T_I16;
+    if ((int8_t)(uvalue & 0xFFFFFFFFu) == value) return T_I32;
+    return T_I64;
   }
 
   static bool instIsPure(InstKind kind) {
@@ -122,7 +138,7 @@ namespace IR {
     std::vector<Inst*> outputs;
 
     union {
-      uint32_t immValue;
+      int64_t immValue;
       RegKind immReg;
     };
 
@@ -171,6 +187,8 @@ namespace IR {
   };
 
   struct Graph {
+    const BFVM::Config &config;
+
     int nextBlockId = 1;
     int nextInstId = 1;
 
@@ -180,14 +198,17 @@ namespace IR {
 
     bool destroyed = false;
 
+    explicit Graph(const BFVM::Config &config);
+
     void clearPassData();
 
     void destroy();
   };
 
   struct Builder {
-    explicit Builder(Graph *graph) : graph(graph) {}
+    explicit Builder(Graph *graph);
 
+    const BFVM::Config &config;
     Graph *graph = nullptr;
     Block *block = nullptr;
     Inst *inst = nullptr;
@@ -204,9 +225,10 @@ namespace IR {
     Inst *pushBinary(InstKind kind, Inst *x, Inst *y);
 
     Inst *pushNop() { return push(I_NOP); }
-    Inst *pushImm(uint32_t imm);
+    Inst *pushImm(int64_t imm, TypeId typeId = T_INVALID);
     Inst *pushAdd(Inst *x, Inst *y) { return pushBinary(I_ADD, x, y); }
     Inst *pushSub(Inst *x, Inst *y) { return pushBinary(I_SUB, x, y); }
+    Inst *pushGep(Inst *x, Inst *y) { return pushBinary(I_GEP, x, y); }
     Inst *pushLd(Inst *x) { return pushUnary(I_LD, x); }
     Inst *pushStr(Inst *x, Inst *y) { return pushBinary(I_STR, x, y); }
     Inst *pushReg(RegKind reg);

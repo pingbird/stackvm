@@ -74,6 +74,7 @@ void Opt::validate(Graph *graph) {
         case I_GETCHAR:
           assert(cur->inputs.empty());
           break;
+        case I_GEP:
         case I_SUB:
         case I_ADD:
         case I_STR:

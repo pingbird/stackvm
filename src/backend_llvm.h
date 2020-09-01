@@ -6,6 +6,7 @@
 
 #include "ir.h"
 #include "diagnostics.h"
+#include "bfvm.h"
 
 namespace Backend::LLVM {
   template<typename T>
@@ -18,6 +19,7 @@ namespace Backend::LLVM {
   }
 
   struct ModuleCompiler {
+    const BFVM::Config &config;
     llvm::TargetMachine &machine;
     llvm::LLVMContext &context;
     llvm::IRBuilder<> builder;
@@ -25,12 +27,11 @@ namespace Backend::LLVM {
     llvm::legacy::PassManager passManager;
     llvm::legacy::FunctionPassManager functionPassManager;
 
-    llvm::Type *addrType;
     llvm::Type *intType;
     llvm::Type *voidType;
     llvm::Type *voidPtrType;
-    llvm::Type *wordType;
-    llvm::Type *wordPtrType;
+    llvm::Type *cellType;
+    llvm::Type *cellPtrType;
     llvm::Type *boolType;
 
     llvm::FunctionType *putcharType;
@@ -47,6 +48,7 @@ namespace Backend::LLVM {
     DIAG_DECL()
 
     explicit ModuleCompiler(
+      const BFVM::Config &config,
       llvm::TargetMachine &machine,
       llvm::LLVMContext &context,
       llvm::Module &module

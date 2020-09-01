@@ -8,7 +8,12 @@ void JIT::init() {
   LLVMInitializeNativeAsmParser();
 }
 
-JIT::Linker::Linker(llvm::TargetMachine &machine, llvm::LLVMContext &context) :
+JIT::Linker::Linker(
+  const BFVM::Config &config,
+  llvm::TargetMachine &machine,
+  llvm::LLVMContext &context
+) :
+  config(config),
   machine(machine),
   dataLayout(machine.createDataLayout()),
   context(context),
@@ -77,13 +82,14 @@ JIT::EntryFn JIT::Linker::findEntry(const std::string &name = "code") {
   return llvm::jitTargetAddressToFunction<EntryFn>(entryAddress);
 }
 
-JIT::Pipeline::Pipeline() :
+JIT::Pipeline::Pipeline(const BFVM::Config &config) :
+  config(config),
   machine(llvm::EngineBuilder().selectTarget()),
-  linker(*machine, context) {}
+  linker(config, *machine, context) {}
 
 std::unique_ptr<JIT::Handle> JIT::Pipeline::compile(IR::Graph *graph) {
   auto module = std::make_unique<llvm::Module>("bf", context);
-  Backend::LLVM::ModuleCompiler moduleCompiler(*machine, context, *module);
+  Backend::LLVM::ModuleCompiler moduleCompiler(config, *machine, context, *module);
   DIAG_FWD(moduleCompiler)
   moduleCompiler.compileGraph(graph);
   DIAG_FWD(linker)
