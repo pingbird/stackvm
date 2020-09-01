@@ -107,7 +107,7 @@ void BFVM::run(const std::string &code, const Config &config) {
 
   DIAG_ARTIFACT("ir.txt", IR::printGraph(graph))
 
-  DIAG(event, "Initialize JIT")
+  DIAG(event, "JIT Initialization")
 
   JIT::init();
   JIT::Pipeline jit;
