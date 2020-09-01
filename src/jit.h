@@ -13,6 +13,7 @@
 
 #include "ir.h"
 #include "backend_llvm.h"
+#include "diagnostics.h"
 
 namespace JIT {
   void init();
@@ -28,6 +29,8 @@ namespace JIT {
     llvm::orc::LegacyRTDyldObjectLinkingLayer objectLayer;
     llvm::orc::LegacyIRCompileLayer<decltype(objectLayer), llvm::orc::SimpleCompiler> compileLayer;
     std::unordered_map<std::string, llvm::JITTargetAddress> symbols;
+
+    DIAG_DECL()
 
     Linker(
       llvm::TargetMachine &machine,
@@ -60,6 +63,8 @@ namespace JIT {
     std::unique_ptr<llvm::TargetMachine> machine;
     llvm::LLVMContext context;
     Linker linker;
+
+    DIAG_DECL()
 
     Pipeline();
 

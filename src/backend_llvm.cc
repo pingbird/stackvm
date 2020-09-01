@@ -93,6 +93,8 @@ void Backend::LLVM::ModuleCompiler::optimize() {
 void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph *graph) {
   graph->clearPassData();
 
+  DIAG(eventStart, "Translate BFVM IR to LLVM IR")
+
   int numBlocks = graph->blocks.size();
   for (int b = 0; b < numBlocks; b++) {
     IR::Block *block = graph->blocks[b];
@@ -117,28 +119,33 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph *graph) {
         auto inputInst = inst->inputs[i];
         IR::TypeId phiType = Opt::resolveType(inst);
         IR::TypeId inputType = Opt::resolveType(inputInst);
-        if (phiType == IR::maxType(phiType, inputType)) {
-          auto terminator = block->getTerminator();
-          assert(terminator);
-          builder.SetInsertPoint(terminator);
-          value = builder.CreateIntCast(value, phi->getType(), false);
-        } else {
-          std::cerr << "Phi input has wrong type.\ninput = %" + std::to_string(inst->inputs[i]->id) + "\ntype = " << std::endl;
-          value->getType()->print(llvm::errs());
-          std::cerr << "\nexpected = " << std::endl;
-          phi->getType()->print(llvm::errs());
+#ifndef NDEBUG
+        if (phiType != IR::maxType(phiType, inputType)) {
+          std::cerr << "Phi input has wrong type." << std::endl;
+          std::cerr << "input: %" + std::to_string(inst->inputs[i]->id) << std::endl;
+          std::cerr << "type: " << printRaw(*value->getType()) << std::endl;
+          std::cerr << "expected: " << printRaw(*phi->getType()) << std::endl;
           abort();
         }
+#endif
+        auto terminator = block->getTerminator();
+        assert(terminator);
+        builder.SetInsertPoint(terminator);
+        value = builder.CreateIntCast(value, phi->getType(), false);
       }
       phi->addIncoming(value, block);
     }
   }
 
-  module.print(llvm::errs(), nullptr);
+  DIAG(eventFinish, "Translate BFVM IR to LLVM IR")
+
+  DIAG_ARTIFACT("llvm_ir_unopt.txt", printRaw(module))
+  DIAG(eventStart, "Optimize LLVM IR")
 
   optimize();
 
-  module.print(llvm::errs(), nullptr);
+  DIAG(eventFinish, "Optimize LLVM IR")
+  DIAG_ARTIFACT("llvm_ir_opt.txt", printRaw(module))
 }
 
 void Backend::LLVM::ModuleCompiler::compileBlock(IR::Block *block) {

@@ -5,8 +5,18 @@
 #include <llvm/IR/LegacyPassManager.h>
 
 #include "ir.h"
+#include "diagnostics.h"
 
 namespace Backend::LLVM {
+  template<typename T>
+  std::string printRaw(T &value) {
+    std::string out;
+    llvm::raw_string_ostream stream(out);
+    stream << value;
+    stream.flush();
+    return out;
+  }
+
   struct ModuleCompiler {
     llvm::TargetMachine &machine;
     llvm::LLVMContext &context;
@@ -30,6 +40,8 @@ namespace Backend::LLVM {
     llvm::Function *bfMainFunction;
 
     std::vector<IR::Inst*> pendingPhis;
+
+    DIAG_DECL()
 
     explicit ModuleCompiler(
       llvm::TargetMachine &machine,

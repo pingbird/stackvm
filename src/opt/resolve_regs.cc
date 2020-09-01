@@ -1,9 +1,5 @@
 #include <map>
-#include <string>
-#include <vector>
-#include <optional>
 #include <functional>
-#include <iostream>
 #include <cassert>
 
 #include "../opt.h"
@@ -34,14 +30,10 @@ void Opt::resolveRegs(Graph *graph) {
         case I_REG: {
           Inst *value = state.states[inst->immReg];
           if (value != nullptr) {
-            Opt::validate(graph);
             inst->rewriteWith(value);
-            Opt::validate(graph);
           } else {
             if (state.dep != nullptr) {
-              Opt::validate(graph);
               inst->rewriteWith(state.dep);
-              Opt::validate(graph);
             } else {
               state.dep = inst;
             }

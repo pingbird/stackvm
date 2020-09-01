@@ -74,7 +74,9 @@ JIT::EntryFn JIT::Linker::findEntry(const std::string &name = "code") {
 
 JIT::Pipeline::Pipeline() :
   machine(llvm::EngineBuilder().selectTarget()),
-  linker(*machine, context) {}
+  linker(*machine, context) {
+  DIAG_FWD(&linker)
+}
 
 std::unique_ptr<JIT::Handle> JIT::Pipeline::compile(IR::Graph *graph) {
   auto module = std::make_unique<llvm::Module>("bf", context);
