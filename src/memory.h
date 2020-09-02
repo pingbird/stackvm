@@ -37,8 +37,8 @@ namespace Memory {
   size_t parseSize(const std::string &str);
 
   struct Config {
-    size_t sizeLeft = gib / 2;
-    size_t sizeRight = gib / 2;
+    size_t sizeLeft = 128 * mib;
+    size_t sizeRight = 128 * mib;
   };
 
   struct Tape {

@@ -1,5 +1,42 @@
 # stackvm - A brainfuck VM
 
+## Setup
+
+Requirements:
+* CMake
+* LLVM
+* A C++ compiler
+
+Pull in submodules:
+```
+git submodule update --init
+```
+
+Build:
+
+```
+mkdir build
+cd build
+cmake ..
+make -j12
+```
+
+## Usage
+
+```
+Usage:
+    stackvm [-h] [-w <bits>] [-e <value>] [-l <size>] [-r <size>] [-p] [-d <dir>] <program>
+
+Parameters:
+    -h, --help               print this help message
+    -w, --width <bits>       width of cells in bits, default = 8
+    -e, --eof <value>        value of getchar when eof is reached, default = 0
+    -l, --tape-left <size>   how much virtual memory to reserve to the left, default = 128MiB
+    -r, --tape-right <size>  how much virtual memory to reserve to the right, default = 128MiB
+    -p, --profile            enable profiling of build and execution
+    -d, --dump <dir>         dumps intermediates into the specified folder
+```
+
 ## Architecture
 
 ```
@@ -17,5 +54,4 @@ src/backend_llvm - Translates StackVM IR to LLVM IR
 src/jit          - Host JIT pipeline with LLVM
 src/diagnostics  - DI for logging and artifact dumps
 src/memory       - Lazy tape memory allocator
-src/math_util    - Misc. math utilities
 ```

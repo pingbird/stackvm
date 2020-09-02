@@ -20,14 +20,17 @@ struct CommandLineDiag : Diag {
   explicit CommandLineDiag(const BFVM::Config &config) : config(config) {}
 
   void log(const std::string& string) override {
+    if (!config.profile) return;
     std::cerr << "[ log    ] " << string << std::endl;
   }
 
   void event(const std::string& name) override {
+    if (!config.profile) return;
     std::cerr << "[ event  ] " << name << std::endl;
   }
 
   void eventStart(const std::string& name) override {
+    if (!config.profile) return;
     if (events.count(name)) {
       abort();
     }
@@ -39,6 +42,7 @@ struct CommandLineDiag : Diag {
   }
 
   void eventFinish(const std::string& name) override {
+    if (!config.profile) return;
     int64_t endTime = Time::getTime();
     if (!events.count(name)) {
       abort();
@@ -53,11 +57,10 @@ struct CommandLineDiag : Diag {
   }
 
   void artifact(const std::string& name, const DiagCollector &contents) override {
-    if (!config.dump.empty()) {
-      std::ofstream ofs(config.dump + "/" + name);
-      ofs << contents();
-      ofs.close();
-    }
+    if (config.dump.empty()) return;
+    std::ofstream ofs(config.dump + "/" + name);
+    ofs << contents();
+    ofs.close();
   }
 };
 #endif
@@ -127,8 +130,7 @@ void BFVM::run(const std::string &code, const Config &config) {
 
   DIAG(eventStart, "Run")
 
-  Memory::Config tapeConfig;
-  Memory::Tape tape(tapeConfig);
+  Memory::Tape tape(config.memory);
 
   handle->entry(static_cast<char*>(tape.start));
 

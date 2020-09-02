@@ -1,9 +1,13 @@
+#include <unistd.h>
+#include <zconf.h>
 #include "memory.h"
 
 Memory::Tape::Tape(const Config &config) : config(config) {
+  size_t pageSize = sysconf(_SC_PAGESIZE);
+  size_t mapSize = ((config.sizeLeft + config.sizeRight) + (pageSize - 1)) & ~(pageSize - 1);
   base = static_cast<char*>(mmap(
     nullptr,
-    config.sizeLeft + config.sizeRight,
+    mapSize,
     PROT_READ | PROT_WRITE,
     MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE,
     -1,
@@ -63,6 +67,6 @@ size_t Memory::parseSize(const std::string &str) {
     return size;
   } else {
     std::cerr << "Invalid argument: " << err << std::endl;
-    abort();
+    exit(1);
   }
 }

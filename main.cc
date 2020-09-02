@@ -13,7 +13,7 @@ void printUsageAndExit(group &cli) {
     .split_alternatives(false)
     .indent_size(4)
     .first_column(4)
-    .doc_column(24);
+    .doc_column(29);
 
   std::cerr << "Usage:\n" << usage_lines(cli, "stackvm", format) << std::endl;
   std::cerr << "Parameters:\n" << documentation(cli, format) << std::endl;
@@ -26,11 +26,15 @@ int main(int argc, char** argv) {
   bool help = false;
   std::string program;
   std::vector<std::string> invalid;
+  std::string tapeLeft;
+  std::string tapeRight;
 
   auto cli = (
     option("-h", "--help").set(help) % "print this help message",
     (option("-w", "--width") & value("bits", config.cellWidth)) % "width of cells in bits, default = 8",
     (option("-e", "--eof") & value("value", config.cellWidth)) % "value of getchar when eof is reached, default = 0",
+    (option("-l", "--tape-left") & value("size", tapeLeft)) % "how much virtual memory to reserve to the left, default = 128MiB",
+    (option("-r", "--tape-right") & value("size", tapeRight)) % "how much virtual memory to reserve to the right, default = 128MiB",
 #ifndef NDIAG
     option("-p", "--profile").set(config.profile) % "enable profiling of build and execution",
     (option("-d", "--dump") & value("dir", config.dump)) % "dumps intermediates into the specified folder",
@@ -49,6 +53,14 @@ int main(int argc, char** argv) {
       std::cerr << "Error: Unrecognized argument \"" << arg << "\"" << std::endl;
     }
     printUsageAndExit(cli);
+  }
+
+  if (!tapeLeft.empty()) {
+    config.memory.sizeLeft = Memory::parseSize(tapeLeft);
+  }
+
+  if (!tapeRight.empty()) {
+    config.memory.sizeRight = Memory::parseSize(tapeRight);
   }
 
   std::ifstream input(program);

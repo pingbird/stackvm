@@ -48,7 +48,7 @@ struct Builder {
             IR::R_PTR,
             b.pushGep(
               b.pushReg(IR::R_PTR),
-              b.pushImm(1, IR::T_PTR)
+              b.pushImm(-1, IR::T_PTR)
             )
           );
           break;
@@ -57,7 +57,7 @@ struct Builder {
             IR::R_PTR,
             b.pushGep(
               b.pushReg(IR::R_PTR),
-              b.pushImm(-1, IR::T_PTR)
+              b.pushImm(1, IR::T_PTR)
             )
           );
           break;
