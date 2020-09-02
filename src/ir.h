@@ -49,15 +49,15 @@ namespace IR {
 
   std::string typeString(TypeId type);
 
-  static TypeId typeForSize(int size) {
-    switch (size) {
-      case 1:
-        return T_I8;
-      case 2:
-        return T_I16;
-      case 4:
-        return T_I32;
+  static TypeId typeForWidth(int width) {
+    switch (width) {
       case 8:
+        return T_I8;
+      case 16:
+        return T_I16;
+      case 32:
+        return T_I32;
+      case 64:
         return T_I64;
       default:
         abort();

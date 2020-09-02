@@ -40,7 +40,7 @@ static TypeId rawGetType(ResolutionState &state, Inst *inst) {
       return T_PTR;
     case I_LD:
     case I_GETCHAR:
-      return typeForSize(inst->block->graph->config.cellSize);
+      return typeForWidth(inst->block->graph->config.cellWidth);
     case I_REG:
       switch (inst->immReg) {
         case R_PTR:

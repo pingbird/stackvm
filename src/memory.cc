@@ -11,3 +11,58 @@ Memory::Tape::Tape(const Config &config) : config(config) {
   ));
   start = base + config.sizeLeft;
 }
+
+bool strEquals(const std::string &x, const std::string &y) {
+  unsigned int length = x.size();
+  if (y.size() != length) {
+    return false;
+  }
+  for (unsigned int i = 0; i < length; i++) {
+    if (std::tolower(x[i]) != std::tolower(y[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+bool Memory::tryParseSize(const std::string &str, size_t &size, std::string &err) {
+  const char *start = str.c_str();
+  char *end = nullptr;
+  double value = std::strtod(start, &end);
+  if (start == end) {
+    err = "Could not parse size \"" + str + "\"";
+    return false;
+  } else if (value < 0) {
+    err = "Size cannot be less than zero \"" + str + "\"";
+    return false;
+  }
+
+  if (end == start + str.size()) {
+    size = value;
+    return true;
+  }
+
+  auto tail = std::string(end);
+  auto suffix = &sizes[0];
+  while (suffix->str != nullptr) {
+    if (strEquals(suffix->str, tail)) {
+      size = value * suffix->size;
+      return true;
+    }
+    suffix++;
+  }
+
+  err = "Unknown suffix \"" + tail + "\"";
+  return false;
+}
+
+size_t Memory::parseSize(const std::string &str) {
+  size_t size;
+  std::string err;
+  if (tryParseSize(str, size, err)) {
+    return size;
+  } else {
+    std::cerr << "Invalid argument: " << err << std::endl;
+    abort();
+  }
+}

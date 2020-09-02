@@ -53,8 +53,8 @@ struct CommandLineDiag : Diag {
   }
 
   void artifact(const std::string& name, const DiagCollector &contents) override {
-    if (config.enableArtifacts) {
-      std::ofstream ofs(config.artifactsDir + "/" + name);
+    if (!config.dump.empty()) {
+      std::ofstream ofs(config.dump + "/" + name);
       ofs << contents();
       ofs.close();
     }
@@ -62,9 +62,9 @@ struct CommandLineDiag : Diag {
 };
 #endif
 
-int nativeGetchar() {
+int nativeGetchar(int closed) {
   int c = getchar();
-  return c == -1 ? 0 : c;
+  return c == -1 ? closed : c;
 }
 
 void nativePutchar(int x) {
@@ -73,14 +73,19 @@ void nativePutchar(int x) {
 
 void BFVM::run(const std::string &code, const Config &config) {
 #ifndef NDIAG
-  auto diag = new CommandLineDiag(config);
-  auto artifactsPath = std::filesystem::weakly_canonical(config.artifactsDir);
-  if (artifactsPath.empty()) {
-    std::cerr << "Error: Artifacts directory cannot be empty.";
-    abort();
+  CommandLineDiag *diag = nullptr;
+
+  if (config.profile || !config.dump.empty()) {
+    diag = new CommandLineDiag(config);
+    if (
+      !config.dump.empty() &&
+      !std::filesystem::exists(config.dump) &&
+      !std::filesystem::create_directory(config.dump)
+    ) {
+      std::cerr << "Error: Failed to create output directory \"" + config.dump + "\"";
+      exit(1);
+    }
   }
-  std::filesystem::remove_all(config.artifactsDir);
-  assert(std::filesystem::create_directory(config.artifactsDir));
 #endif
   DIAG(eventStart, "No-op baseline")
   DIAG(eventFinish, "No-op baseline")

@@ -32,7 +32,7 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
   voidType = llvm::Type::getVoidTy(context);
   voidPtrType = voidType->getPointerTo();
 
-  cellType = convertType(IR::typeForSize(config.cellSize));
+  cellType = convertType(IR::typeForWidth(config.cellWidth));
   cellPtrType = cellType->getPointerTo();
 
   boolType = llvm::Type::getInt1Ty(context);
@@ -52,7 +52,7 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
 
   getcharType = llvm::FunctionType::get(
     intType,
-    {},
+    {intType},
     false
   );
 
@@ -230,7 +230,9 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
       });
     case IR::I_GETCHAR:
       return builder.CreateIntCast(
-        builder.CreateCall(getcharFunction, {}),
+        builder.CreateCall(getcharFunction, {
+          llvm::ConstantInt::get(intType, config.eofValue)
+        }),
         cellType,
         false
       );

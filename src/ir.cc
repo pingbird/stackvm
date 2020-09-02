@@ -289,7 +289,7 @@ Inst *Builder::push(
 Inst *Builder::pushImm(int64_t imm, TypeId typeId) {
   auto newInst = push(I_IMM);
   if (typeId == T_INVALID) {
-    typeId = typeForSize(graph->config.cellSize);
+    typeId = typeForWidth(graph->config.cellWidth);
   }
   newInst->type = typeId;
   newInst->immValue = imm;
