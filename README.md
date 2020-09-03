@@ -1,5 +1,7 @@
 # stackvm - A brainfuck VM
 
+![](https://user-images.githubusercontent.com/2466461/92068152-23277880-ed74-11ea-8cf9-c9f9d85afc27.png)
+
 ## Setup
 
 Requirements:
