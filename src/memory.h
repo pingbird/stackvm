@@ -17,7 +17,9 @@ namespace Memory {
   const size_t kib = b * 1024;
   const size_t mib = kib * 1024;
   const size_t gib = mib * 1024;
-  const size_t small = kib;
+
+  // The size at which memset is less efficient than mmap in a call to clear.
+  const size_t mmapThreshold = kib * 512;
 
   struct {
     const char *str;
@@ -46,6 +48,7 @@ namespace Memory {
     const Config &config;
     char* base = nullptr;
     char* start = nullptr;
+    bool small;
     size_t totalSize;
     explicit Tape(const Config &config);
     ~Tape();
