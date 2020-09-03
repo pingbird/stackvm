@@ -84,6 +84,7 @@ static Precedence instPrecedence(InstKind kind) {
   switch (kind) {
     case I_ADD:
     case I_SUB:
+    case I_GEP:
       return {2, 3};
     case I_SETREG:
     case I_STR:
@@ -187,6 +188,14 @@ std::string IR::printInst(Inst *inst) {
       block->successors[1]->getLabel();
     case I_GOTO: return "goto ." + block->successors[0]->getLabel();
     case I_RET: return "return";
+    case I_GEP:
+      auto r = inst->inputs[1];
+      if (r->kind == I_IMM && r->immValue < 0) {
+        return inputStr(ctx, 0) + " &- " + std::to_string(-r->immValue);
+      }
+      return inputStr(ctx, 0)
+        + " &+ "
+        + inputStr({inst, precedence.rhs}, 1);
   }
   return "unreachable";
 }

@@ -92,6 +92,7 @@ namespace IR {
       case I_IMM:
       case I_ADD:
       case I_SUB:
+      case I_GEP:
       case I_LD:
       case I_REG:
       case I_PHI:

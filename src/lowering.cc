@@ -43,25 +43,35 @@ struct Builder {
           value = b.pushSub(value, b.pushImm(count));
           b.pushStrPtr(value);
           break;
-        } case BF::I_LEFT:
+        } case BF::I_LEFT: {
+          int count = 1;
+          while (pos != length && (*program)[pos] == BF::I_LEFT) {
+            count++;
+            pos++;
+          }
           b.pushSetReg(
             IR::R_PTR,
             b.pushGep(
               b.pushReg(IR::R_PTR),
-              b.pushImm(-1, IR::T_PTR)
+              b.pushImm(-count, IR::T_PTR)
             )
           );
           break;
-        case BF::I_RIGHT:
+        } case BF::I_RIGHT: {
+          int count = 1;
+          while (pos != length && (*program)[pos] == BF::I_RIGHT) {
+            count++;
+            pos++;
+          }
           b.pushSetReg(
             IR::R_PTR,
             b.pushGep(
               b.pushReg(IR::R_PTR),
-              b.pushImm(1, IR::T_PTR)
+              b.pushImm(count, IR::T_PTR)
             )
           );
           break;
-        case BF::I_LOOP: {
+        } case BF::I_LOOP: {
           auto condBlock = new IR::Block(graph);
           auto loopBlock = new IR::Block(graph);
           auto nextBlock = new IR::Block(graph);

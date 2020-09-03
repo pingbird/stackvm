@@ -7,10 +7,18 @@
 
 using std::to_string;
 
-int64_t Time::getTime() {
-  return std::chrono::duration_cast<std::chrono::nanoseconds>(
+static int64_t startTime = 0;
+
+int64_t Util::Time::getTime() {
+  int64_t time = std::chrono::duration_cast<std::chrono::nanoseconds>(
     std::chrono::high_resolution_clock::now() - std::chrono::time_point<std::chrono::high_resolution_clock>()
   ).count();
+  if (startTime == 0) {
+    startTime = time;
+    return 0;
+  } else {
+    return time - startTime;
+  }
 }
 
 static std::locale getLocale() {
@@ -28,7 +36,7 @@ static std::string prettyPrint(int64_t value) {
   return stream.str();
 }
 
-std::string Time::printTime(int64_t time, int64_t precision) {
+std::string Util::Time::printTime(int64_t time, int64_t precision) {
   if (time < microsecond * 10 || precision <= nanosecond) {
     return prettyPrint(time / nanosecond) + " ns";
   } else if (time < millisecond * 10 || precision <= microsecond) {
@@ -38,4 +46,40 @@ std::string Time::printTime(int64_t time, int64_t precision) {
   } else {
     return prettyPrint(time / second) + " s";
   }
+}
+
+std::ofstream Util::openFile(const std::string &path) {
+  std::ofstream file;
+  file.open(path);
+  if (!file.is_open()) {
+    std::cerr << std::system_error(
+      errno, std::system_category(), "Error: Failed to open \"" + path + "\""
+    ).what() << std::endl;
+    exit(1);
+  }
+  return file;
+}
+
+static void replaceAll(
+  std::string &str,
+  const std::string &from,
+  const std::string &to
+) {
+  size_t pos = 0;
+  while ((pos = str.find(from, pos)) != std::string::npos) {
+    str.replace(pos, from.size(), to);
+    pos += from.size();
+  }
+}
+
+std::string Util::escapeCsvRow(std::string str) {
+  if (
+    str.find(',') != std::string::npos ||
+    str.find('\"') != std::string::npos ||
+    str.find(' ') != std::string::npos
+  ) {
+    replaceAll(str, "\"", "\\\"");
+    return "\"" + str + "\"";
+  }
+  return str;
 }

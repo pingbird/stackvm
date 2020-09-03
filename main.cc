@@ -13,7 +13,7 @@ void printUsageAndExit(group &cli) {
     .split_alternatives(false)
     .indent_size(4)
     .first_column(4)
-    .doc_column(29);
+    .doc_column(27);
 
   std::cerr << "Usage:\n" << usage_lines(cli, "stackvm", format) << std::endl;
   std::cerr << "Parameters:\n" << documentation(cli, format) << std::endl;
@@ -26,17 +26,16 @@ int main(int argc, char** argv) {
   bool help = false;
   std::string program;
   std::vector<std::string> invalid;
-  std::string tapeLeft;
-  std::string tapeRight;
+  std::string memory;
 
   auto cli = (
     option("-h", "--help").set(help) % "print this help message",
-    (option("-w", "--width") & value("bits", config.cellWidth)) % "width of cells in bits, default = 8",
-    (option("-e", "--eof") & value("value", config.cellWidth)) % "value of getchar when eof is reached, default = 0",
-    (option("-l", "--tape-left") & value("size", tapeLeft)) % "how much virtual memory to reserve to the left, default = 128MiB",
-    (option("-r", "--tape-right") & value("size", tapeRight)) % "how much virtual memory to reserve to the right, default = 128MiB",
+    (option("-w", "--width") & value("bits", config.cellWidth)) % "width of cells in bits\ndefault = 8",
+    (option("-e", "--eof") & value("value", config.cellWidth)) % "value of getchar when eof is reached\ndefault = 0",
+    (option("-m", "--memory") & value("size", memory)) % "how much virtual memory to reserve to the left and right\ndefault = 128MiB,128MiB",
 #ifndef NDIAG
-    option("-p", "--profile").set(config.profile) % "enable profiling of build and execution",
+    (option("-p", "--profile") & value("count", config.profile)) % "enable profiling of build and execution",
+    option("-q", "--quiet").set(config.quiet) % "suppress printing profiling info to the console",
     (option("-d", "--dump") & value("dir", config.dump)) % "dumps intermediates into the specified folder",
 #endif
     value("program").set(program)
@@ -55,12 +54,16 @@ int main(int argc, char** argv) {
     printUsageAndExit(cli);
   }
 
-  if (!tapeLeft.empty()) {
-    config.memory.sizeLeft = Memory::parseSize(tapeLeft);
-  }
-
-  if (!tapeRight.empty()) {
-    config.memory.sizeRight = Memory::parseSize(tapeRight);
+  if (!memory.empty()) {
+    auto delimiter = memory.find(',');
+    if (delimiter == std::string::npos) {
+      size_t size = Memory::parseSize(memory);
+      config.memory.sizeLeft = size;
+      config.memory.sizeRight = size;
+    } else {
+      config.memory.sizeLeft = Memory::parseSize(memory.substr(0, delimiter));
+      config.memory.sizeRight = Memory::parseSize(memory.substr(delimiter + 1));
+    }
   }
 
   std::ifstream input(program);

@@ -2,6 +2,7 @@
 
 #include <string>
 #include <functional>
+#include <fstream>
 
 #ifndef NDIAG
 
@@ -28,12 +29,18 @@ struct Diag {
 
 #endif
 
-namespace Time {
-  const uint64_t nanosecond = 1;
-  const uint64_t microsecond = nanosecond * 1000;
-  const uint64_t millisecond = microsecond * 1000;
-  const uint64_t second = millisecond * 1000;
+namespace Util {
+  namespace Time {
+    const uint64_t nanosecond = 1;
+    const uint64_t microsecond = nanosecond * 1000;
+    const uint64_t millisecond = microsecond * 1000;
+    const uint64_t second = millisecond * 1000;
 
-  int64_t getTime();
-  std::string printTime(int64_t ns, int64_t precision = second);
+    int64_t getTime();
+    std::string printTime(int64_t ns, int64_t precision = second);
+  }
+
+  std::ofstream openFile(const std::string &path);
+
+  std::string escapeCsvRow(std::string str);
 }

@@ -1,7 +1,5 @@
 #include <iostream>
 #include <filesystem>
-#include <fstream>
-#include <cassert>
 
 #include "bfvm.h"
 #include "ir_print.h"
@@ -10,57 +8,93 @@
 #include "lowering.h"
 #include "opt.h"
 #include "jit.h"
-#include "memory.h"
 
 #ifndef NDIAG
 struct CommandLineDiag : Diag {
   const BFVM::Config &config;
   std::unordered_map<std::string, int64_t> events;
+  std::ofstream timeline;
 
   explicit CommandLineDiag(const BFVM::Config &config) : config(config) {}
 
-  void log(const std::string& string) override {
+  void log(const std::string &string) override {
     if (!config.profile) return;
-    std::cerr << "[ log    ] " << string << std::endl;
+    if (!config.quiet) {
+      std::cerr << "[ log    ] " << string << std::endl;
+    }
+    if (!config.dump.empty()) {
+      timeline
+        << std::to_string(Util::Time::getTime())
+        << ",log,"
+        << Util::escapeCsvRow(string)
+        << std::endl;
+    }
   }
 
-  void event(const std::string& name) override {
+  void event(const std::string &name) override {
     if (!config.profile) return;
-    std::cerr << "[ event  ] " << name << std::endl;
+    if (!config.quiet) {
+      std::cerr << "[ event  ] " << name << std::endl;
+    }
+    if (!config.dump.empty()) {
+      timeline
+        << std::to_string(Util::Time::getTime())
+        << ",event,"
+        << Util::escapeCsvRow(name)
+        << std::endl;
+    }
   }
 
-  void eventStart(const std::string& name) override {
+  void eventStart(const std::string &name) override {
     if (!config.profile) return;
     if (events.count(name)) {
       abort();
     }
-    std::cerr
-      << "[ start  ] "
-      << std::string(events.size() + 1, '>')
-      << " " << name << std::endl;
-    events[name] = Time::getTime();
+    if (!config.quiet) {
+      std::cerr
+        << "[ start  ] "
+        << std::string(events.size() + 1, '>')
+        << " " << name << std::endl;
+    }
+    if (!config.dump.empty()) {
+      timeline
+        << std::to_string(Util::Time::getTime())
+        << ",start,"
+        << Util::escapeCsvRow(name)
+        << std::endl;
+    }
+    events[name] = Util::Time::getTime();
   }
 
-  void eventFinish(const std::string& name) override {
+  void eventFinish(const std::string &name) override {
     if (!config.profile) return;
-    int64_t endTime = Time::getTime();
+    int64_t endTime = Util::Time::getTime();
     if (!events.count(name)) {
       abort();
     }
-    std::cerr
-      << "[ finish ] "
-      << std::string(events.size(), '<')
-      << " " << name << " - "
-      << Time::printTime(endTime - events[name])
-      << std::endl;
+    if (!config.quiet) {
+      std::cerr
+        << "[ finish ] "
+        << std::string(events.size(), '<')
+        << " " << name << " - "
+        << Util::Time::printTime(endTime - events[name])
+        << std::endl;
+    }
+    if (!config.dump.empty()) {
+      timeline
+        << std::to_string(Util::Time::getTime())
+        << ",finish,"
+        << Util::escapeCsvRow(name)
+        << std::endl;
+    }
     events.erase(name);
   }
 
-  void artifact(const std::string& name, const DiagCollector &contents) override {
+  void artifact(const std::string &name, const DiagCollector &contents) override {
     if (config.dump.empty()) return;
-    std::ofstream ofs(config.dump + "/" + name);
-    ofs << contents();
-    ofs.close();
+    std::ofstream file = Util::openFile(config.dump + "/" + name);
+    file << contents();
+    file.close();
   }
 };
 #endif
@@ -74,68 +108,90 @@ void nativePutchar(int x) {
   putchar(x);
 }
 
-void BFVM::run(const std::string &code, const Config &config) {
+struct Context {
 #ifndef NDIAG
   CommandLineDiag *diag = nullptr;
-
-  if (config.profile || !config.dump.empty()) {
-    diag = new CommandLineDiag(config);
-    if (
-      !config.dump.empty() &&
-      !std::filesystem::exists(config.dump) &&
-      !std::filesystem::create_directory(config.dump)
-    ) {
-      std::cerr << "Error: Failed to create output directory \"" + config.dump + "\"";
-      exit(1);
-    }
-  }
 #endif
-  DIAG(eventStart, "No-op baseline")
-  DIAG(eventFinish, "No-op baseline")
+  const BFVM::Config &config;
 
-  DIAG(eventStart, "Build")
+  explicit Context(
+    const BFVM::Config &config
+  ) : config(config) {}
 
-  DIAG(eventStart, "Parse")
-  auto program = BF::parse(code);
-  DIAG(eventFinish, "Parse")
+  void run(const std::string &code) {
+#ifndef NDIAG
+    if (config.profile || !config.dump.empty()) {
+      diag = new CommandLineDiag(config);
+      if (!config.dump.empty()) {
+        if (
+          !std::filesystem::exists(config.dump) &&
+          !std::filesystem::create_directory(config.dump)
+        ) {
+          std::cerr << "Error: Failed to create output directory \"" + config.dump + "\"";
+          exit(1);
+        }
+        diag->timeline = Util::openFile(config.dump + "/timeline.txt");
+        diag->timeline << "Time,Event,Label" << std::endl;
+      }
+    }
+#endif
+    DIAG(eventStart, "No-op baseline")
+    DIAG(eventFinish, "No-op baseline")
 
-  DIAG_ARTIFACT("bf.txt", BF::print(program))
+    DIAG(eventStart, "Build")
 
-  DIAG(eventStart, "Lower")
-  auto graph = Lowering::buildProgram(config, &program);
-  Opt::validate(graph);
-  DIAG(eventFinish, "Lower")
+    DIAG(eventStart, "Parse")
+    auto program = BF::parse(code);
+    DIAG(eventFinish, "Parse")
 
-  DIAG_ARTIFACT("ir_unopt.txt", IR::printGraph(graph))
+    DIAG_ARTIFACT("bf.txt", BF::print(program))
 
-  DIAG(eventStart, "Optimize")
-  Opt::resolveRegs(graph);
-  Opt::validate(graph);
-  DIAG(eventFinish, "Optimize")
+    DIAG(eventStart, "Lower")
+    auto graph = Lowering::buildProgram(config, &program);
+    Opt::validate(graph);
+    DIAG(eventFinish, "Lower")
 
-  DIAG_ARTIFACT("ir.txt", IR::printGraph(graph))
+    DIAG_ARTIFACT("ir_unopt.txt", IR::printGraph(graph))
 
-  DIAG(event, "JIT Initialization")
+    DIAG(eventStart, "Optimize")
+    Opt::resolveRegs(graph);
+    Opt::validate(graph);
+    DIAG(eventFinish, "Optimize")
 
-  JIT::init();
-  JIT::Pipeline jit(config);
-  DIAG_FWD(jit)
-  jit.addSymbol("native_putchar", nativePutchar);
-  jit.addSymbol("native_getchar", nativeGetchar);
+    DIAG_ARTIFACT("ir.txt", IR::printGraph(graph))
 
-  auto handle = jit.compile(graph);
-  graph->destroy();
+    DIAG(event, "JIT Initialization")
 
-  DIAG(eventFinish, "Build")
+    JIT::init();
+    JIT::Pipeline jit(config);
+    DIAG_FWD(jit)
+    jit.addSymbol("native_putchar", nativePutchar);
+    jit.addSymbol("native_getchar", nativeGetchar);
 
-  DIAG(eventStart, "Run")
+    auto handle = jit.compile(graph);
+    graph->destroy();
 
-  Memory::Tape tape(config.memory);
+    DIAG(eventFinish, "Build")
 
-  handle->entry(static_cast<char*>(tape.start));
+    DIAG(eventStart, "Run")
 
-  DIAG(eventFinish, "Run")
+    Memory::Tape tape(config.memory);
 
-  delete graph;
-  delete diag;
+    handle->entry(static_cast<char*>(tape.start));
+
+    DIAG(eventFinish, "Run")
+
+#ifndef NDIAG
+    if (!config.dump.empty()) {
+      diag->timeline.close();
+    }
+#endif
+
+    delete graph;
+    delete diag;
+  }
+};
+
+void BFVM::run(const std::string &code, const Config &config) {
+  Context(config).run(code);
 }
