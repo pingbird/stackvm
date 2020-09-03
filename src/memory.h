@@ -17,6 +17,7 @@ namespace Memory {
   const size_t kib = b * 1024;
   const size_t mib = kib * 1024;
   const size_t gib = mib * 1024;
+  const size_t small = kib;
 
   struct {
     const char *str;
@@ -45,6 +46,9 @@ namespace Memory {
     const Config &config;
     char* base = nullptr;
     char* start = nullptr;
+    size_t totalSize;
     explicit Tape(const Config &config);
+    ~Tape();
+    void clear();
   };
 }

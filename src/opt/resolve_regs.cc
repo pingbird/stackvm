@@ -11,12 +11,12 @@ struct BlockState {
   Inst *dep = nullptr;
 };
 
-void Opt::resolveRegs(Graph *graph) {
+void Opt::resolveRegs(Graph &graph) {
   Builder builder(graph);
 
   std::map<Block*, BlockState> states;
 
-  for (Block *block : graph->blocks) {
+  for (Block *block : graph.blocks) {
     auto &state = states[block];
     Inst *inst = block->first;
     while (inst != nullptr) {
@@ -89,7 +89,7 @@ void Opt::resolveRegs(Graph *graph) {
     return value;
   };
 
-  for (Block *block : graph->blocks) {
+  for (Block *block : graph.blocks) {
     auto &state = states[block];
     for (int reg = 0; reg < NUM_REGS; reg++) {
       if (state.dep != nullptr) {

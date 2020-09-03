@@ -207,10 +207,10 @@ namespace IR {
   };
 
   struct Builder {
-    explicit Builder(Graph *graph);
+    explicit Builder(Graph &graph);
 
     const BFVM::Config &config;
-    Graph *graph = nullptr;
+    Graph &graph;
     Block *block = nullptr;
     Inst *inst = nullptr;
 

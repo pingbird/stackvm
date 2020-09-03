@@ -6,20 +6,20 @@
 
 using namespace IR;
 
-void Opt::validate(Graph *graph) {
+void Opt::validate(Graph &graph) {
 #ifdef NDEBUG
   return;
 #else
   std::unordered_set<int> instIds;
 
-  for (Block *block : graph->blocks) {
-    assert(block->id < graph->nextBlockId);
+  for (Block *block : graph.blocks) {
+    assert(block->id < graph.nextBlockId);
     std::vector<Inst*> insts;
     Inst *cur = block->first;
     while (cur != nullptr) {
       insts.push_back(cur);
       assert(!instIds.count(cur->id));
-      assert(cur->id < graph->nextInstId);
+      assert(cur->id < graph.nextInstId);
       instIds.insert(cur->id);
       cur = cur->next;
     }
@@ -32,7 +32,7 @@ void Opt::validate(Graph *graph) {
   }
 
   bool first = true;
-  for (Block *block : graph->blocks) {
+  for (Block *block : graph.blocks) {
     if (first) {
       assert(block->predecessors.empty());
       first = false;

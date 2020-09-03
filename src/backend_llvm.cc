@@ -38,8 +38,8 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
   boolType = llvm::Type::getInt1Ty(context);
 
   putcharType = llvm::FunctionType::get(
-    intType,
-    {intType},
+    voidType,
+    {voidPtrType, intType},
     false
   );
 
@@ -52,7 +52,7 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
 
   getcharType = llvm::FunctionType::get(
     intType,
-    {intType},
+    {voidPtrType},
     false
   );
 
@@ -64,8 +64,8 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
   );
 
   bfMainType = llvm::FunctionType::get(
-    intType,
-    {cellPtrType},
+    cellPtrType,
+    {voidPtrType, cellPtrType},
     false
   );
 
@@ -106,14 +106,14 @@ void Backend::LLVM::ModuleCompiler::optimize() {
   passManager.run(module);
 }
 
-void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph *graph) {
-  graph->clearPassData();
+void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph &graph) {
+  graph.clearPassData();
 
   DIAG(eventStart, "Translate")
 
-  int numBlocks = graph->blocks.size();
+  int numBlocks = graph.blocks.size();
   for (int b = 0; b < numBlocks; b++) {
-    IR::Block *block = graph->blocks[b];
+    IR::Block *block = graph.blocks[b];
     llvm::BasicBlock *newBlock = llvm::BasicBlock::Create(
       context,
       block->getLabel(),
@@ -123,7 +123,7 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph *graph) {
   }
 
   for (int b = 0; b < numBlocks; b++) {
-    compileBlock(graph->blocks[b]);
+    compileBlock(*graph.blocks[b]);
   }
 
   for (IR::Inst *inst : pendingPhis) {
@@ -164,9 +164,9 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph *graph) {
   DIAG_ARTIFACT("llvm_ir_opt.txt", printRaw(module))
 }
 
-void Backend::LLVM::ModuleCompiler::compileBlock(IR::Block *block) {
-  builder.SetInsertPoint(static_cast<llvm::BasicBlock*>(block->passData));
-  IR::Inst *inst = block->first;
+void Backend::LLVM::ModuleCompiler::compileBlock(IR::Block &block) {
+  builder.SetInsertPoint(static_cast<llvm::BasicBlock*>(block.passData));
+  IR::Inst *inst = block.first;
   while (inst) {
     auto value = compileInst(inst);
     inst->passData = value;
@@ -180,7 +180,7 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
       switch (inst->immReg) {
         case IR::R_PTR:
           return builder.CreatePointerCast(
-            bfMainFunction->args().begin(),
+            bfMainFunction->args().begin() + 1,
             cellPtrType
           );
         default:
@@ -226,12 +226,13 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
       );
     case IR::I_PUTCHAR:
       return builder.CreateCall(putcharFunction, {
+        bfMainFunction->args().begin(),
         getValue(inst->inputs[0], intType)
       });
     case IR::I_GETCHAR:
       return builder.CreateIntCast(
         builder.CreateCall(getcharFunction, {
-          llvm::ConstantInt::get(intType, config.eofValue)
+          bfMainFunction->args().begin()
         }),
         cellType,
         false
@@ -264,7 +265,7 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
         static_cast<llvm::BasicBlock*>(inst->block->successors[0]->passData)
       );
     case IR::I_RET:
-      return builder.CreateRet(llvm::ConstantInt::get(intType, 69));
+      return builder.CreateRet(getValue(inst->inputs[0], cellPtrType));
   }
   abort();
 }
@@ -272,7 +273,7 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
 llvm::Value *Backend::LLVM::ModuleCompiler::getValue(IR::Inst *inst, llvm::Type *type) {
   auto value = static_cast<llvm::Value*>(inst->passData);
   if (value == nullptr) {
-    compileBlock(inst->block);
+    compileBlock(*inst->block);
     value = static_cast<llvm::Value*>(inst->passData);
     assert(value != nullptr);
   }
@@ -297,7 +298,6 @@ llvm::Type *Backend::LLVM::ModuleCompiler::convertType(IR::TypeId typeId) {
     case IR::T_I64:
       return llvm::Type::getInt64Ty(context);
     default:
-      assert(false);
-      return nullptr;
+      abort();
   }
 }

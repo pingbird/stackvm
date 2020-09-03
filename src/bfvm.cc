@@ -56,14 +56,14 @@ struct CommandLineDiag : Diag {
         << std::string(events.size() + 1, '>')
         << " " << name << std::endl;
     }
+    events[name] = Util::Time::getTime();
     if (!config.dump.empty()) {
       timeline
-        << std::to_string(Util::Time::getTime())
+        << std::to_string(events[name])
         << ",start,"
         << Util::escapeCsvRow(name)
         << std::endl;
     }
-    events[name] = Util::Time::getTime();
   }
 
   void eventFinish(const std::string &name) override {
@@ -82,7 +82,7 @@ struct CommandLineDiag : Diag {
     }
     if (!config.dump.empty()) {
       timeline
-        << std::to_string(Util::Time::getTime())
+        << std::to_string(endTime)
         << ",finish,"
         << Util::escapeCsvRow(name)
         << std::endl;
@@ -99,18 +99,22 @@ struct CommandLineDiag : Diag {
 };
 #endif
 
-int nativeGetchar(int closed) {
-  int c = getchar();
-  return c == -1 ? closed : c;
-}
+enum InputState {
+  IS_NONE,
+  IS_RECORDING,
+  IS_READING,
+};
 
-void nativePutchar(int x) {
-  putchar(x);
-}
+struct Context;
+int bfGetchar(Context *context);
+void bfPutchar(Context *context, int x);
 
 struct Context {
 #ifndef NDIAG
   CommandLineDiag *diag = nullptr;
+  size_t inputIndex = 0;
+  std::string inputRecording;
+  InputState inputState = IS_NONE;
 #endif
   const BFVM::Config &config;
 
@@ -147,51 +151,107 @@ struct Context {
     DIAG_ARTIFACT("bf.txt", BF::print(program))
 
     DIAG(eventStart, "Lower")
-    auto graph = Lowering::buildProgram(config, &program);
-    Opt::validate(graph);
+    auto graph = Lowering::buildProgram(config, program);
+
+    Opt::validate(*graph);
     DIAG(eventFinish, "Lower")
 
-    DIAG_ARTIFACT("ir_unopt.txt", IR::printGraph(graph))
+    DIAG_ARTIFACT("ir_unopt.txt", IR::printGraph(*graph))
 
     DIAG(eventStart, "Optimize")
-    Opt::resolveRegs(graph);
-    Opt::validate(graph);
+    Opt::resolveRegs(*graph);
+    Opt::validate(*graph);
     DIAG(eventFinish, "Optimize")
 
-    DIAG_ARTIFACT("ir.txt", IR::printGraph(graph))
+    DIAG_ARTIFACT("ir.txt", IR::printGraph(*graph))
 
     DIAG(event, "JIT Initialization")
 
     JIT::init();
     JIT::Pipeline jit(config);
     DIAG_FWD(jit)
-    jit.addSymbol("native_putchar", nativePutchar);
-    jit.addSymbol("native_getchar", nativeGetchar);
+    jit.addSymbol("native_putchar", bfPutchar);
+    jit.addSymbol("native_getchar", bfGetchar);
 
-    auto handle = jit.compile(graph);
+    auto handle = jit.compile(*graph);
     graph->destroy();
 
     DIAG(eventFinish, "Build")
 
-    DIAG(eventStart, "Run")
+#ifndef NDIAG
+    if (config.profile) {
+      Memory::Tape tape(config.memory);
+      inputState = IS_RECORDING;
+      {
+        DIAG(eventStart, "Dry run")
+        handle->entry(this, tape.start);
+        DIAG(eventFinish, "Dry run");
+      }
 
-    Memory::Tape tape(config.memory);
+      DIAG(log, "Doing " + std::to_string(config.profile) + " runs")
 
-    handle->entry(static_cast<char*>(tape.start));
-
-    DIAG(eventFinish, "Run")
+      inputState = IS_READING;
+      DIAG(eventStart, "Batch")
+      for (int i = 0; i < config.profile; i++) {
+        tape.clear();
+        inputIndex = 0;
+        handle->entry(this, tape.start);
+      }
+      DIAG(eventFinish, "Batch")
+    } else {
+#endif
+      DIAG(eventStart, "Run")
+      Memory::Tape tape(config.memory);
+      handle->entry(this, tape.start);
+      DIAG(eventFinish, "Run")
+#ifndef NDIAG
+    }
+#endif
 
 #ifndef NDIAG
     if (!config.dump.empty()) {
       diag->timeline.close();
     }
-#endif
-
-    delete graph;
     delete diag;
+#endif
   }
 };
 
 void BFVM::run(const std::string &code, const Config &config) {
   Context(config).run(code);
+}
+
+int bfGetchar(Context *context) {
+#ifndef NDIAG
+  switch (context->inputState) {
+    case IS_READING:
+      if (context->inputIndex == context->inputRecording.length()) {
+        return context->config.eofValue;
+      } else {
+        return context->inputRecording[context->inputIndex++];
+      }
+    case IS_RECORDING: {
+      int c = getchar();
+      if (c == -1) {
+        return context->config.eofValue;
+      } else {
+        context->inputRecording.push_back(c);
+        return c;
+      }
+    } default: break;
+  }
+#endif
+  int c = getchar();
+  if (c == -1) {
+    return context->config.eofValue;
+  } else {
+    return c;
+  }
+}
+
+void bfPutchar(Context *context, int x) {
+#ifndef NDIAG
+  if (context->inputState == IS_READING) return;
+#endif
+  putchar(x);
 }

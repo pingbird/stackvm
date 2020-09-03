@@ -274,7 +274,7 @@ void Graph::clearPassData() {
 
 Graph::Graph(const BFVM::Config &config) : config(config) {}
 
-Builder::Builder(Graph *graph) : config(graph->config), graph(graph) {}
+Builder::Builder(Graph &graph) : config(graph.config), graph(graph) {}
 
 Inst *Builder::push(
   InstKind kind,
@@ -289,7 +289,7 @@ Inst *Builder::push(
 Inst *Builder::pushImm(int64_t imm, TypeId typeId) {
   auto newInst = push(I_IMM);
   if (typeId == T_INVALID) {
-    typeId = typeForWidth(graph->config.cellWidth);
+    typeId = typeForWidth(graph.config.cellWidth);
   }
   newInst->type = typeId;
   newInst->immValue = imm;
@@ -327,7 +327,7 @@ void Builder::setBlock(Block *newBlock, Inst *newInst) {
 }
 
 Block *Builder::openBlock() {
-  auto newBlock = new Block(graph);
+  auto newBlock = new Block(&graph);
   setBlock(newBlock);
   return newBlock;
 }

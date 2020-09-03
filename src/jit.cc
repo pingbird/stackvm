@@ -87,7 +87,7 @@ JIT::Pipeline::Pipeline(const BFVM::Config &config) :
   machine(llvm::EngineBuilder().selectTarget()),
   linker(config, *machine, context) {}
 
-std::unique_ptr<JIT::Handle> JIT::Pipeline::compile(IR::Graph *graph) {
+std::unique_ptr<JIT::Handle> JIT::Pipeline::compile(IR::Graph &graph) {
   auto module = std::make_unique<llvm::Module>("bf", context);
   Backend::LLVM::ModuleCompiler moduleCompiler(config, *machine, context, *module);
   DIAG_FWD(moduleCompiler)

@@ -58,8 +58,8 @@ namespace Backend::LLVM {
 
     llvm::Type *convertType(IR::TypeId typeId);
 
-    void compileGraph(IR::Graph *graph);
-    void compileBlock(IR::Block *block);
+    void compileGraph(IR::Graph &graph);
+    void compileBlock(IR::Block &block);
     llvm::Value *compileInst(IR::Inst *inst);
     llvm::Value *getValue(IR::Inst *inst, llvm::Type *type = nullptr);
   };

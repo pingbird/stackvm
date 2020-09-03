@@ -1,10 +1,11 @@
 #pragma once
 
 #include <cassert>
+#include <memory>
 
 #include "ir.h"
 #include "bf.h"
 
 namespace Lowering {
-  IR::Graph *buildProgram(const BFVM::Config &config, const std::vector<BF::Inst> *program);
+  std::unique_ptr<IR::Graph> buildProgram(const BFVM::Config &config, const std::vector<BF::Inst> &program);
 }

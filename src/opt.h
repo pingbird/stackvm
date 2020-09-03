@@ -3,8 +3,8 @@
 #include "ir.h"
 
 namespace Opt {
-  void resolveRegs(IR::Graph *graph);
-  void validate(IR::Graph *graph);
+  void resolveRegs(IR::Graph &graph);
+  void validate(IR::Graph &graph);
 
   namespace Fold {
     struct FoldRules;

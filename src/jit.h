@@ -18,7 +18,7 @@
 namespace JIT {
   void init();
 
-  typedef char* (*EntryFn)(char*);
+  typedef char* (*EntryFn)(void*, char*);
 
   struct Linker {
     const BFVM::Config &config;
@@ -71,7 +71,7 @@ namespace JIT {
 
     explicit Pipeline(const BFVM::Config &config);
 
-    std::unique_ptr<JIT::Handle> compile(IR::Graph *graph);
+    std::unique_ptr<JIT::Handle> compile(IR::Graph &graph);
 
     template<typename T> void addSymbol(const std::string& name, T *pointer) {
       linker.symbols[name] = llvm::pointerToJITTargetAddress(pointer);

@@ -16,4 +16,8 @@ if (DEFINED BF_SANITIZE)
     add_compile_options(-fsanitize=address)
 endif()
 
+if (DEFINED BF_NO_DIAG)
+    ADD_DEFINITIONS(-DNDIAG)
+endif()
+
 target_link_libraries(stackvm LLVM-10)

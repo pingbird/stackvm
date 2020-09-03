@@ -6,26 +6,26 @@
 #include "lowering.h"
 
 struct Builder {
-  explicit Builder(const BFVM::Config &config, const std::vector<BF::Inst> *program) :
-    config(config),
+  explicit Builder(IR::Graph &graph, const std::vector<BF::Inst> &program) :
+    graph(graph),
+    config(graph.config),
     program(program),
-    graph(new IR::Graph(config)),
     b(graph) {}
 
   const BFVM::Config &config;
-  const std::vector<BF::Inst> *program;
-  IR::Graph* graph;
+  const std::vector<BF::Inst> &program;
+  IR::Graph &graph;
   IR::Builder b;
   int pos = 0;
 
   void buildBody() {
-    auto length = program->size();
+    auto length = program.size();
     while (pos != length) {
-      auto inst = (*program)[pos++];
+      auto inst = program[pos++];
       switch (inst) {
         case BF::I_ADD: {
           int count = 1;
-          while (pos != length && (*program)[pos] == BF::I_ADD) {
+          while (pos != length && program[pos] == BF::I_ADD) {
             count++;
             pos++;
           }
@@ -35,7 +35,7 @@ struct Builder {
           break;
         } case BF::I_SUB: {
           int count = 1;
-          while (pos != length && (*program)[pos] == BF::I_SUB) {
+          while (pos != length && program[pos] == BF::I_SUB) {
             count++;
             pos++;
           }
@@ -45,7 +45,7 @@ struct Builder {
           break;
         } case BF::I_LEFT: {
           int count = 1;
-          while (pos != length && (*program)[pos] == BF::I_LEFT) {
+          while (pos != length && program[pos] == BF::I_LEFT) {
             count++;
             pos++;
           }
@@ -59,7 +59,7 @@ struct Builder {
           break;
         } case BF::I_RIGHT: {
           int count = 1;
-          while (pos != length && (*program)[pos] == BF::I_RIGHT) {
+          while (pos != length && program[pos] == BF::I_RIGHT) {
             count++;
             pos++;
           }
@@ -72,9 +72,9 @@ struct Builder {
           );
           break;
         } case BF::I_LOOP: {
-          auto condBlock = new IR::Block(graph);
-          auto loopBlock = new IR::Block(graph);
-          auto nextBlock = new IR::Block(graph);
+          auto condBlock = new IR::Block(&graph);
+          auto loopBlock = new IR::Block(&graph);
+          auto nextBlock = new IR::Block(&graph);
 
           b.pushGoto(condBlock);
 
@@ -87,7 +87,7 @@ struct Builder {
 
           b.setBlock(loopBlock);
           buildBody();
-          auto endInst = (*program)[pos++];
+          auto endInst = program[pos++];
           assert(endInst == BF::I_END);
           b.pushGoto(condBlock);
 
@@ -110,12 +110,12 @@ struct Builder {
     b.openBlock();
     buildBody();
     b.pushRet(b.pushReg(IR::R_PTR));
-    assert(pos == program->size());
+    assert(pos == program.size());
   }
 };
 
-IR::Graph *Lowering::buildProgram(const BFVM::Config &config, const std::vector<BF::Inst> *program) {
-  auto builder = Builder(config, program);
-  builder.buildProgram();
-  return builder.graph;
+std::unique_ptr<IR::Graph> Lowering::buildProgram(const BFVM::Config &config, const std::vector<BF::Inst> &program) {
+  auto graph = std::make_unique<IR::Graph>(config);
+  Builder(*graph, program).buildProgram();
+  return graph;
 }

@@ -26,6 +26,7 @@ struct Diag {
 #define DIAG(m, ...)
 #define DIAG_FWD(x)
 #define DIAG_DECL()
+#define DIAG_ARTIFACT(n, c)
 
 #endif
 
