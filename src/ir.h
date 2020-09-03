@@ -78,14 +78,6 @@ namespace IR {
     return x > y ? x : y;
   }
 
-  static int immType(int64_t value) {
-    uint64_t uvalue = value;
-    if ((int8_t)(uvalue & 0xFFu) == value) return T_I8;
-    if ((int8_t)(uvalue & 0xFFFFu) == value) return T_I16;
-    if ((int8_t)(uvalue & 0xFFFFFFFFu) == value) return T_I32;
-    return T_I64;
-  }
-
   static bool instIsPure(InstKind kind) {
     switch (kind) {
       case I_NOP:

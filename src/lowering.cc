@@ -67,7 +67,7 @@ struct Builder {
             IR::R_PTR,
             b.pushGep(
               b.pushReg(IR::R_PTR),
-              b.pushImm(count, IR::T_PTR)
+              b.pushImm(count, IR::T_I32)
             )
           );
           break;

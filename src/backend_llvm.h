@@ -32,7 +32,6 @@ namespace Backend::LLVM {
     llvm::Type *voidPtrType;
     llvm::Type *cellType;
     llvm::Type *cellPtrType;
-    llvm::Type *boolType;
 
     llvm::FunctionType *putcharType;
     llvm::Function *putcharFunction;
@@ -44,6 +43,8 @@ namespace Backend::LLVM {
     llvm::Function *bfMainFunction;
 
     std::vector<IR::Inst*> pendingPhis;
+
+    llvm::Value *regValues[IR::NUM_REGS];
 
     DIAG_DECL()
 

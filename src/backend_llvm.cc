@@ -35,8 +35,6 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
   cellType = convertType(IR::typeForWidth(config.cellWidth));
   cellPtrType = cellType->getPointerTo();
 
-  boolType = llvm::Type::getInt1Ty(context);
-
   putcharType = llvm::FunctionType::get(
     voidType,
     {voidPtrType, intType},
@@ -120,6 +118,20 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph &graph) {
       bfMainFunction
     );
     block->passData = static_cast<void*>(newBlock);
+
+    if (b == 0) {
+      builder.SetInsertPoint(newBlock);
+      for (int reg = 0; reg < IR::NUM_REGS; reg++) {
+        switch ((IR::RegKind) reg) {
+          case IR::R_PTR:
+            builder.CreateStore(
+              bfMainFunction->getArg(1),
+              regValues[reg] = builder.CreateAlloca(cellPtrType)
+            );
+            break;
+        }
+      }
+    }
   }
 
   for (int b = 0; b < numBlocks; b++) {
@@ -177,21 +189,21 @@ void Backend::LLVM::ModuleCompiler::compileBlock(IR::Block &block) {
 llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
   switch (inst->kind) {
     case IR::I_REG:
-      switch (inst->immReg) {
-        case IR::R_PTR:
-          return builder.CreatePointerCast(
-            bfMainFunction->args().begin() + 1,
-            cellPtrType
-          );
-        default:
-          abort();
-      }
+      return builder.CreateLoad(regValues[inst->immReg]);
     case IR::I_SETREG:
-      abort();
+      return builder.CreateStore(
+        getValue(inst->inputs[0]),
+        regValues[inst->immReg]
+      );
     case IR::I_NOP:
-    case IR::I_IMM:
-      return llvm::ConstantInt::get(intType, inst->immValue);
-    case IR::I_ADD: {
+    case IR::I_IMM: {
+      auto type = Opt::resolveType(inst);
+      return llvm::ConstantInt::get(
+        convertType(type),
+        inst->immValue,
+        inst->immValue < 0
+      );
+    } case IR::I_ADD: {
       auto type = convertType(Opt::resolveType(inst));
       return builder.CreateAdd(
         getValue(inst->inputs[0], type),
@@ -211,18 +223,12 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
     case IR::I_LD:
       return builder.CreateLoad(
         cellType,
-        builder.CreateIntToPtr(
-          getValue(inst->inputs[0]),
-          cellPtrType
-        )
+        getValue(inst->inputs[0])
       );
     case IR::I_STR:
       return builder.CreateStore(
         getValue(inst->inputs[1]),
-        builder.CreateIntToPtr(
-          getValue(inst->inputs[0]),
-          cellPtrType
-        )
+        getValue(inst->inputs[0])
       );
     case IR::I_PUTCHAR:
       return builder.CreateCall(putcharFunction, {
