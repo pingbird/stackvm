@@ -21,3 +21,5 @@ if (DEFINED BF_NO_DIAG)
 endif()
 
 target_link_libraries(stackvm LLVM-10)
+
+add_library(stackvm-runtime STATIC runtime.cpp)

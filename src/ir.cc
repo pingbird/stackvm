@@ -11,6 +11,7 @@ std::string IR::typeString(TypeId type) {
     case T_INVALID: return "Invalid";
     case T_NONE: return "None";
     case T_PTR: return "Ptr";
+    case T_SIZE: return "Size";
     case T_I64: return "I64";
     case T_I32: return "I32";
     case T_I16: return "I16";

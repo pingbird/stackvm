@@ -29,6 +29,7 @@ namespace IR {
     I_IF,
     I_GOTO,
     I_RET,
+    I_TAG,
   };
 
   typedef uint16_t TypeId;
@@ -37,6 +38,7 @@ namespace IR {
     T_INVALID,
     T_NONE,
     T_PTR,
+    T_SIZE,
     T_I8,
     T_I16,
     T_I32,

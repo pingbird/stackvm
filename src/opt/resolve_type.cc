@@ -20,6 +20,7 @@ static TypeId rawGetType(ResolutionState &state, Inst *inst) {
     case I_RET:
     case I_PUTCHAR:
     case I_STR:
+    case I_TAG:
       return T_NONE;
     case I_IMM:
       abort(); // Given type by builder

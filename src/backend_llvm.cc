@@ -30,14 +30,19 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
 {
   intType = llvm::Type::getInt32Ty(context);
   voidType = llvm::Type::getVoidTy(context);
-  voidPtrType = voidType->getPointerTo();
+
+  auto contextType = llvm::StructType::get(context);
+  contextType->setName("Context");
+  contextPtrType = contextType->getPointerTo();
+
+  sizeType = llvm::IntegerType::getInt64Ty(context);
 
   cellType = convertType(IR::typeForWidth(config.cellWidth));
   cellPtrType = cellType->getPointerTo();
 
   putcharType = llvm::FunctionType::get(
     voidType,
-    {voidPtrType, intType},
+    {contextPtrType, intType},
     false
   );
 
@@ -50,7 +55,7 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
 
   getcharType = llvm::FunctionType::get(
     intType,
-    {voidPtrType},
+    {contextPtrType},
     false
   );
 
@@ -63,7 +68,7 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
 
   bfMainType = llvm::FunctionType::get(
     cellPtrType,
-    {voidPtrType, cellPtrType},
+    {contextPtrType, cellPtrType},
     false
   );
 
@@ -167,13 +172,13 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph &graph) {
 
   DIAG(eventFinish, "Translate")
 
-  DIAG_ARTIFACT("llvm_ir_unopt.txt", printRaw(module))
+  DIAG_ARTIFACT("llvm_ir_unopt.ll", printRaw(module))
   DIAG(eventStart, "Optimize LLVM")
 
   optimize();
 
   DIAG(eventFinish, "Optimize LLVM")
-  DIAG_ARTIFACT("llvm_ir_opt.txt", printRaw(module))
+  DIAG_ARTIFACT("llvm_ir_opt.ll", printRaw(module))
 }
 
 void Backend::LLVM::ModuleCompiler::compileBlock(IR::Block &block) {
@@ -198,11 +203,12 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
     case IR::I_NOP:
     case IR::I_IMM: {
       auto type = Opt::resolveType(inst);
-      return llvm::ConstantInt::get(
-        convertType(type),
+      auto out = llvm::ConstantInt::get(
+        sizeType,
         inst->immValue,
-        inst->immValue < 0
+        type == IR::T_SIZE
       );
+      return out;
     } case IR::I_ADD: {
       auto type = convertType(Opt::resolveType(inst));
       return builder.CreateAdd(
@@ -295,6 +301,8 @@ llvm::Type *Backend::LLVM::ModuleCompiler::convertType(IR::TypeId typeId) {
       return voidType;
     case IR::T_PTR:
       return cellPtrType;
+    case IR::T_SIZE:
+      return sizeType;
     case IR::T_I8:
       return llvm::Type::getInt8Ty(context);
     case IR::T_I16:

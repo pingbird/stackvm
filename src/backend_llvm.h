@@ -29,7 +29,8 @@ namespace Backend::LLVM {
 
     llvm::Type *intType;
     llvm::Type *voidType;
-    llvm::Type *voidPtrType;
+    llvm::Type *contextPtrType;
+    llvm::Type *sizeType;
     llvm::Type *cellType;
     llvm::Type *cellPtrType;
 
