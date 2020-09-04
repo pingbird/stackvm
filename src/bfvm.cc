@@ -27,7 +27,7 @@ struct CommandLineDiag : Diag {
         << std::to_string(Util::Time::getTime())
         << ",log,"
         << Util::escapeCsvRow(string)
-        << std::endl;
+        << "\r\n";
     }
   }
 
@@ -41,7 +41,7 @@ struct CommandLineDiag : Diag {
         << std::to_string(Util::Time::getTime())
         << ",event,"
         << Util::escapeCsvRow(name)
-        << std::endl;
+        << "\r\n";
     }
   }
 
@@ -62,7 +62,7 @@ struct CommandLineDiag : Diag {
         << std::to_string(events[name])
         << ",start,"
         << Util::escapeCsvRow(name)
-        << std::endl;
+        << "\r\n";
     }
   }
 
@@ -85,7 +85,7 @@ struct CommandLineDiag : Diag {
         << std::to_string(endTime)
         << ",finish,"
         << Util::escapeCsvRow(name)
-        << std::endl;
+        << "\r\n";
     }
     events.erase(name);
   }
@@ -114,6 +114,7 @@ struct Context {
   CommandLineDiag *diag = nullptr;
   size_t inputIndex = 0;
   std::string inputRecording;
+  std::string outputRecording;
   InputState inputState = IS_NONE;
 #endif
   const BFVM::Config &config;
@@ -135,7 +136,7 @@ struct Context {
           exit(1);
         }
         diag->timeline = Util::openFile(config.dump + "/timeline.txt");
-        diag->timeline << "Time,Event,Label" << std::endl;
+        diag->timeline << "Time,Event,Label" << "\r\n";
       }
     }
 #endif
@@ -187,6 +188,9 @@ struct Context {
         handle->entry(this, tape.start);
         DIAG(eventFinish, "Dry run");
       }
+
+      DIAG_ARTIFACT("input.txt", inputRecording)
+      DIAG_ARTIFACT("output.txt", outputRecording)
 
       DIAG(log, "Doing " + std::to_string(config.profile) + " runs")
 
@@ -251,7 +255,11 @@ int bfGetchar(Context *context) {
 
 void bfPutchar(Context *context, int x) {
 #ifndef NDIAG
-  if (context->inputState == IS_READING) return;
+  if (context->inputState == IS_READING) {
+    return;
+  } else if (context->inputState == IS_RECORDING) {
+    context->outputRecording.push_back(x);
+  }
 #endif
   putchar(x);
 }

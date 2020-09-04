@@ -1,0 +1,82 @@
+.l1:
+  [ptr] <- [ptr] + 8
+  goto .l2
+
+.l2:
+  if [ptr] then .l3 else .l4
+
+.l3:
+  ptr <- ptr &+ 1
+  [ptr] <- [ptr] + 4
+  goto .l5
+
+.l4:
+  ptr <- ptr &+ 2
+  putchar [ptr]
+  ptr <- ptr &+ 2
+  [ptr] <- [ptr] - 3
+  putchar [ptr]
+  [ptr] <- [ptr] + 7
+  putchar [ptr]
+  putchar [ptr]
+  [ptr] <- [ptr] + 3
+  putchar [ptr]
+  ptr <- ptr &+ 1
+  putchar [ptr]
+  ptr <- ptr &- 2
+  [ptr] <- [ptr] - 1
+  putchar [ptr]
+  ptr <- ptr &+ 1
+  putchar [ptr]
+  [ptr] <- [ptr] + 3
+  putchar [ptr]
+  [ptr] <- [ptr] - 6
+  putchar [ptr]
+  [ptr] <- [ptr] - 8
+  putchar [ptr]
+  ptr <- ptr &+ 1
+  [ptr] <- [ptr] + 1
+  putchar [ptr]
+  ptr <- ptr &+ 1
+  [ptr] <- [ptr] + 2
+  putchar [ptr]
+  return
+
+.l5:
+  if [ptr] then .l6 else .l7
+
+.l6:
+  ptr <- ptr &+ 1
+  [ptr] <- [ptr] + 2
+  ptr <- ptr &+ 1
+  [ptr] <- [ptr] + 3
+  ptr <- ptr &+ 1
+  [ptr] <- [ptr] + 3
+  ptr <- ptr &+ 1
+  [ptr] <- [ptr] + 1
+  ptr <- ptr &- 4
+  [ptr] <- [ptr] - 1
+  goto .l5
+
+.l7:
+  ptr <- ptr &+ 1
+  [ptr] <- [ptr] + 1
+  ptr <- ptr &+ 1
+  [ptr] <- [ptr] - 1
+  ptr <- ptr &+ 1
+  [ptr] <- [ptr] + 1
+  ptr <- ptr &+ 2
+  [ptr] <- [ptr] + 1
+  goto .l8
+
+.l8:
+  if [ptr] then .l9 else .l10
+
+.l9:
+  ptr <- ptr &- 1
+  goto .l8
+
+.l10:
+  ptr <- ptr &- 1
+  [ptr] <- [ptr] - 1
+  goto .l2

@@ -1,0 +1,53 @@
+benchmarks:
+  -
+    baseline: 9415
+    batch: 49505
+    name: hello world
+    output: a0b65939670bc2c010f4d5d6a0b3e4e4590fb92b
+    src: samples/hello.b
+
+  -
+    name: semihash
+    src: samples/semihash.b
+    input: samples/semihash.in
+    batch: 64103
+    baseline: 9860
+    output: da39a3ee5e6b4b0d3255bfef95601890afd80709
+
+  -
+    baseline: 20493
+    batch: 35715
+    name: harmonic
+    output: b6589fc6ab0dc82cf12099d1c2d40ab994e8410c
+    src: samples/harmonic.b
+
+  -
+    baseline: 11328
+    batch: 65360
+    name: 8 bit cell size
+    output: 94cfcfa4ce6f757b8211ef5a2882076d7fc4f7bd
+    src: samples/cell_size.b
+    width: 8
+
+  -
+    baseline: 11385
+    batch: 49020
+    name: 16 bit cell size
+    output: d2bb3c52eaf4286637d9a3df1e6024c2aaeb7728
+    src: samples/cell_size.b
+    width: 16
+
+  -
+    baseline: 12268
+    batch: 43860
+    name: 32 bit cell size
+    output: 85c954c43002504b11cc5e239de7c6d0cc96e522
+    src: samples/cell_size.b
+    width: 32
+
+  -
+    baseline: 671765850
+    batch: 2
+    name: mandlebrot
+    output: b77a017f811831f0b74e0d69c08b78e620dbda2b
+    src: samples/mandlebrot.b

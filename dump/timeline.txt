@@ -1,0 +1,23 @@
+Time,Event,Label
+0,start,"No-op baseline"
+6300,finish,"No-op baseline"
+286800,start,Build
+290900,start,Parse
+294800,finish,Parse
+2050200,start,Lower
+3020400,finish,Lower
+4600700,start,Optimize
+4610600,finish,Optimize
+6161000,event,"JIT Initialization"
+6343700,start,Translate
+6378300,finish,Translate
+8384100,start,"Optimize LLVM"
+13576300,finish,"Optimize LLVM"
+15269800,start,Compile
+18769200,finish,Compile
+19023100,finish,Build
+19189300,start,"Dry run"
+19510900,finish,"Dry run"
+22145600,log,"Doing 100000 runs"
+22149100,start,Batch
+3618344200,finish,Batch

@@ -78,6 +78,8 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
     "code",
     module
   );
+
+  bfMainFunction->addAttribute(2, llvm::Attribute::NoAlias);
 }
 
 void Backend::LLVM::ModuleCompiler::optimize() {

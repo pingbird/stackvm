@@ -13,4 +13,6 @@ namespace Opt {
   void fold(Fold::FoldRules *rules, IR::Inst *inst);
 
   IR::TypeId resolveType(IR::Inst *inst);
+
+  bool equal(IR::Inst *a, IR::Inst *b);
 }

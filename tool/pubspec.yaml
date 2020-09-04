@@ -1,0 +1,15 @@
+name: stackvm_tool
+description: Automation tool for benchmarks
+version: 1.0.0
+
+environment:
+  sdk: '>=2.9.0 <3.0.0'
+
+dependencies:
+  crypto: ^2.1.5
+  yaml_edit: ^1.0.2
+  yaml: any
+  csv: any
+
+dev_dependencies:
+  pedantic: ^1.9.0
