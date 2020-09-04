@@ -13,40 +13,44 @@ class BenchmarkResult {
   String outputHash;
 }
 
+Future<Process> startLinuxProcess(String command, List<String> args) {
+  return Process.start(Platform.isLinux ? command : 'wsl', [
+    if (!Platform.isLinux) command,
+    ...args,
+  ]);
+}
+
 Future<BenchmarkResult> runBenchmark({
   String program,
   Uint8List input,
   int batch = 1,
   int width = 8
 }) async {
-  print('running $program');
   var tempDir = Directory('temp');
   if (tempDir.existsSync()) {
     await tempDir.delete(recursive: true);
   }
 
-  var cmd = 'cmake-build-release/stackvm';
-  var proc = await Process.start(Platform.isLinux ? cmd : 'wsl', [
-    if (!Platform.isLinux) cmd,
+  var proc = await startLinuxProcess('cmake-build-release/stackvm', [
     '-w', '$width',
     '-p', '$batch',
     '-d', 'temp',
+    '-m', '0,2048',
     program,
   ]);
 
+  unawaited(proc.stdout.drain());
+  unawaited(proc.stderr.drain());
   proc.stdin.add(input);
-  unawaited(proc.stdin.flush().then((_) {
-    proc.stdin.close();
-  }));
+  await proc.stdin.flush();
+  await proc.stdin.close();
 
   int exitCode;
 
   await Future.any([
-    Future.delayed(Duration(seconds: 200)),
+    Future.delayed(Duration(seconds: 20)),
     proc.exitCode.then((value) => exitCode = value),
   ]);
-
-  print('exit: $exitCode');
 
   if (exitCode == null) {
     proc.kill(ProcessSignal.sigkill);
@@ -169,7 +173,7 @@ void main(List<String> args) async {
         exit(1);
       }
 
-      batch = (1000000000 / (res.time - 7000)).ceil();
+      batch = (1000000000 / res.time).ceil();
 
       editor.update(['benchmarks', i, 'batch'], batch);
     }
