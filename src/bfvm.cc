@@ -109,15 +109,15 @@ struct IO;
 int bfGetchar(IO *io);
 void bfPutchar(IO *context, int x);
 
-#ifndef NDIAG
 struct IO {
+#ifndef NDIAG
   size_t inputIndex = 0;
   std::string inputRecording;
   std::string outputRecording;
   InputState inputState = IS_NONE;
+#endif
   int eofValue = 0;
 };
-#endif
 
 struct CompileContext {
   const BFVM::Config &config;
@@ -217,7 +217,7 @@ struct CompileContext {
 #endif
       DIAG(eventStart, "Run")
       Memory::Tape tape(config.memory);
-      handle(this, tape.start);
+      handle(&io, tape.start);
       DIAG(eventFinish, "Run")
 #ifndef NDIAG
     }
