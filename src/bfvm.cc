@@ -105,25 +105,30 @@ enum InputState {
   IS_READING,
 };
 
-struct Context;
-int bfGetchar(Context *context);
-void bfPutchar(Context *context, int x);
+struct IO;
+int bfGetchar(IO *io);
+void bfPutchar(IO *context, int x);
 
-struct Context {
 #ifndef NDIAG
-  CommandLineDiag *diag = nullptr;
+struct IO {
   size_t inputIndex = 0;
   std::string inputRecording;
   std::string outputRecording;
   InputState inputState = IS_NONE;
+  int eofValue = 0;
+};
 #endif
+
+struct CompileContext {
   const BFVM::Config &config;
 
-  explicit Context(
-    const BFVM::Config &config
-  ) : config(config) {}
+#ifndef NDIAG
+  CommandLineDiag *diag = nullptr;
+#endif
 
-  void run(const std::string &code) {
+  std::unique_ptr<JIT::Pipeline> jit;
+
+  explicit CompileContext(const BFVM::Config &config) : config(config) {
 #ifndef NDIAG
     if (config.profile || !config.dump.empty()) {
       diag = new CommandLineDiag(config);
@@ -139,12 +144,12 @@ struct Context {
         diag->timeline << "Time,Event,Label" << "\r\n";
       }
     }
-#endif
     DIAG(eventStart, "No-op baseline")
     DIAG(eventFinish, "No-op baseline")
+#endif
+  }
 
-    DIAG(eventStart, "Build")
-
+  std::unique_ptr<IR::Graph> buildGraph(const std::string &code) {
     DIAG(eventStart, "Parse")
     auto program = BF::parse(code);
     DIAG(eventFinish, "Parse")
@@ -166,47 +171,53 @@ struct Context {
 
     DIAG_ARTIFACT("ir.txt", IR::printGraph(*graph))
 
+    return graph;
+  }
+
+  std::unique_ptr<BFVM::Handle> compile(IR::Graph &graph) {
     DIAG(event, "JIT Initialization")
 
     JIT::init();
-    JIT::Pipeline jit(config);
-    DIAG_FWD(jit)
-    jit.addSymbol("native_putchar", bfPutchar);
-    jit.addSymbol("native_getchar", bfGetchar);
+    if (!jit) {
+      jit = std::make_unique<JIT::Pipeline>(config);
+      DIAG_FWD(*jit)
+    }
+    jit->addSymbol("native_putchar", bfPutchar);
+    jit->addSymbol("native_getchar", bfGetchar);
+    return jit->compile(graph);
+  }
 
-    auto handle = jit.compile(*graph);
-    graph->destroy();
-
-    DIAG(eventFinish, "Build")
-
+  void run(BFVM::Handle &handle) {
+    IO io;
+    io.eofValue = config.eofValue;
 #ifndef NDIAG
     if (config.profile) {
       Memory::Tape tape(config.memory);
-      inputState = IS_RECORDING;
+      io.inputState = IS_RECORDING;
       {
         DIAG(eventStart, "Dry run")
-        handle->entry(this, tape.start);
-        DIAG(eventFinish, "Dry run");
+        handle(&io, tape.start);
+        DIAG(eventFinish, "Dry run")
       }
 
-      DIAG_ARTIFACT("input.txt", inputRecording)
-      DIAG_ARTIFACT("output.txt", outputRecording)
+      DIAG_ARTIFACT("input.txt", io.inputRecording)
+      DIAG_ARTIFACT("output.txt", io.outputRecording)
 
       DIAG(log, "Doing " + std::to_string(config.profile) + " runs")
 
-      inputState = IS_READING;
+      io.inputState = IS_READING;
       DIAG(eventStart, "Batch")
       for (int i = 0; i < config.profile; i++) {
         tape.clear();
-        inputIndex = 0;
-        handle->entry(this, tape.start);
+        io.inputIndex = 0;
+        handle(&io, tape.start);
       }
       DIAG(eventFinish, "Batch")
     } else {
 #endif
       DIAG(eventStart, "Run")
       Memory::Tape tape(config.memory);
-      handle->entry(this, tape.start);
+      handle(this, tape.start);
       DIAG(eventFinish, "Run")
 #ifndef NDIAG
     }
@@ -221,25 +232,21 @@ struct Context {
   }
 };
 
-void BFVM::run(const std::string &code, const Config &config) {
-  Context(config).run(code);
-}
-
-int bfGetchar(Context *context) {
+int bfGetchar(IO *io) {
 #ifndef NDIAG
-  switch (context->inputState) {
+  switch (io->inputState) {
     case IS_READING:
-      if (context->inputIndex == context->inputRecording.length()) {
-        return context->config.eofValue;
+      if (io->inputIndex == io->inputRecording.length()) {
+        return io->eofValue;
       } else {
-        return context->inputRecording[context->inputIndex++];
+        return io->inputRecording[io->inputIndex++];
       }
     case IS_RECORDING: {
       int c = getchar();
       if (c == -1) {
-        return context->config.eofValue;
+        return io->eofValue;
       } else {
-        context->inputRecording.push_back(c);
+        io->inputRecording.push_back(c);
         return c;
       }
     } default: break;
@@ -247,13 +254,13 @@ int bfGetchar(Context *context) {
 #endif
   int c = getchar();
   if (c == -1) {
-    return context->config.eofValue;
+    return io->eofValue;
   } else {
     return c;
   }
 }
 
-void bfPutchar(Context *context, int x) {
+void bfPutchar(IO *context, int x) {
 #ifndef NDIAG
   if (context->inputState == IS_READING) {
     return;
@@ -262,4 +269,35 @@ void bfPutchar(Context *context, int x) {
   }
 #endif
   putchar(x);
+}
+
+struct InterpreterImpl : public BFVM::Interpreter {
+  CompileContext context;
+
+  explicit InterpreterImpl(
+    const BFVM::Config &config
+  ) : context(config) {}
+
+  std::unique_ptr<BFVM::Handle> compile(const std::string &code) override {
+    auto graph = context.buildGraph(code);
+    auto handle = context.compile(*graph);
+    graph->destroy();
+    return handle;
+  }
+
+  void run(BFVM::Handle &handle) override {
+    context.run(handle);
+  }
+};
+
+BFVM::Interpreter::Interpreter() = default;
+
+std::unique_ptr<BFVM::Interpreter> BFVM::Interpreter::initialize(const BFVM::Config &config) {
+  return std::make_unique<InterpreterImpl>(config);
+}
+
+void BFVM::run(const std::string &code, const BFVM::Config &config) {
+  InterpreterImpl interpreter(config);
+  auto handle = interpreter.compile(code);
+  interpreter.run(*handle);
 }

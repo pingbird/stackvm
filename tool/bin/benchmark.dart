@@ -83,39 +83,6 @@ Future<BenchmarkResult> runBenchmark({
     }
   }
 
-  /*
-  var res = await Process.run(
-    'wsl', [
-      'clang',
-      '-O2',
-      'temp/llvm_ir_unopt.ll',
-      'cmake-build-release/libstackvm-runtime.a'
-      '-o', 'temp/program'
-    ],
-    stdoutEncoding: null,
-    stderrEncoding: null,
-  );
-
-  if (res.exitCode != 0) {
-    stderr.add(res.stderr);
-  }
-
-  res = await Process.run(
-    '/home/pix/bin/perf', [
-      'clang',
-      '-O2',
-      'temp/llvm_ir_unopt.ll',
-      'cmake-build-release/libstackvm-runtime.a',
-      '-o', 'temp/program'
-    ],
-    stdoutEncoding: null,
-    stderrEncoding: null,
-  );
-
-  if (res.exitCode != 0) {
-    stderr.add(res.stderr);
-  }*/
-
   return BenchmarkResult()
     ..time = (batchEnd - batchStart) ~/ batch
     ..outputHash = outputHash;
@@ -125,22 +92,6 @@ void main(List<String> args) async {
   var yamlText = await File('config.yaml').readAsString();
   var editor = YamlEditor(yamlText);
   var yamlData = loadYaml(yamlText);
-
-  /*
-  var makeResult = await Process.run(
-    'wsl', [
-      'make',
-      '-j12',
-    ],
-    workingDirectory: 'cmake-build-release',
-    stdoutEncoding: null,
-    stderrEncoding: null,
-  );
-
-  if (makeResult.exitCode != 0) {
-    stderr.add(makeResult.stderr);
-    exit(1);
-  }*/
 
   var benchmarks = yamlData['benchmarks'] as YamlList;
   for (var i = 0; i < benchmarks.length; i++) {
@@ -213,4 +164,6 @@ void main(List<String> args) async {
   if (editor.edits.isNotEmpty) {
     await File('config.yaml').writeAsString(editor.toString());
   }
+
+  exit(0);
 }

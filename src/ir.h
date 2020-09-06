@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include <cassert>
+
 #include "bfvm.h"
 
 namespace IR {

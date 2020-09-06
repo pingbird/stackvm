@@ -43,6 +43,7 @@ bool Opt::equal(IR::Inst *a, IR::Inst *b) {
     case I_STR:
       abort();
   }
+  abort();
 }
 
 void Opt::fold(FoldRules *rules, Inst *inst) {

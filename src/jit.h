@@ -47,7 +47,7 @@ namespace JIT {
   };
 
   struct Pipeline;
-  struct Handle {
+  struct Handle : public BFVM::Handle {
     llvm::orc::VModuleKey key;
     Pipeline &pipeline;
     EntryFn entry;
@@ -58,7 +58,9 @@ namespace JIT {
       EntryFn entry
     );
 
-    ~Handle();
+    char *operator()(void *context, char *memory) override;
+
+    ~Handle() override;
   };
 
   struct Pipeline {
@@ -71,7 +73,7 @@ namespace JIT {
 
     explicit Pipeline(const BFVM::Config &config);
 
-    std::unique_ptr<JIT::Handle> compile(IR::Graph &graph);
+    std::unique_ptr<BFVM::Handle> compile(IR::Graph &graph);
 
     template<typename T> void addSymbol(const std::string& name, T *pointer) {
       linker.symbols[name] = llvm::pointerToJITTargetAddress(pointer);
