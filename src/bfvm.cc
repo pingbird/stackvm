@@ -174,7 +174,7 @@ struct CompileContext {
     return graph;
   }
 
-  std::unique_ptr<BFVM::Handle> compile(IR::Graph &graph) {
+  std::unique_ptr<BFVM::Handle> compile(IR::Graph &graph, const std::string &name) {
     DIAG(event, "JIT Initialization")
 
     JIT::init();
@@ -184,7 +184,7 @@ struct CompileContext {
     }
     jit->addSymbol("native_putchar", bfPutchar);
     jit->addSymbol("native_getchar", bfGetchar);
-    return jit->compile(graph);
+    return jit->compile(graph, name);
   }
 
   void run(BFVM::Handle &handle) {
@@ -278,9 +278,9 @@ struct InterpreterImpl : public BFVM::Interpreter {
     const BFVM::Config &config
   ) : context(config) {}
 
-  std::unique_ptr<BFVM::Handle> compile(const std::string &code) override {
+  std::unique_ptr<BFVM::Handle> compile(const std::string &code, const std::string &name) override {
     auto graph = context.buildGraph(code);
-    auto handle = context.compile(*graph);
+    auto handle = context.compile(*graph, name);
     graph->destroy();
     return handle;
   }
@@ -298,6 +298,6 @@ std::unique_ptr<BFVM::Interpreter> BFVM::Interpreter::initialize(const BFVM::Con
 
 void BFVM::run(const std::string &code, const BFVM::Config &config) {
   InterpreterImpl interpreter(config);
-  auto handle = interpreter.compile(code);
+  auto handle = interpreter.compile(code, "code");
   interpreter.run(*handle);
 }

@@ -73,7 +73,7 @@ namespace JIT {
 
     explicit Pipeline(const BFVM::Config &config);
 
-    std::unique_ptr<BFVM::Handle> compile(IR::Graph &graph);
+    std::unique_ptr<BFVM::Handle> compile(IR::Graph &graph, const std::string &name);
 
     template<typename T> void addSymbol(const std::string& name, T *pointer) {
       linker.symbols[name] = llvm::pointerToJITTargetAddress(pointer);

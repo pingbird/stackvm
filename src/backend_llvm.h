@@ -40,8 +40,7 @@ namespace Backend::LLVM {
     llvm::FunctionType *getcharType;
     llvm::Function *getcharFunction;
 
-    llvm::FunctionType *bfMainType;
-    llvm::Function *bfMainFunction;
+    llvm::FunctionType *fragmentType;
 
     std::vector<IR::Inst*> pendingPhis;
 
@@ -60,7 +59,7 @@ namespace Backend::LLVM {
 
     llvm::Type *convertType(IR::TypeId typeId);
 
-    void compileGraph(IR::Graph &graph);
+    void compileGraph(IR::Graph &graph, const std::string &name);
     void compileBlock(IR::Block &block);
     llvm::Value *compileInst(IR::Inst *inst);
     llvm::Value *getValue(IR::Inst *inst, llvm::Type *type = nullptr);

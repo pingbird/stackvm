@@ -74,7 +74,7 @@ void JIT::Linker::removeModule(llvm::orc::VModuleKey key) {
   session.releaseVModule(key);
 }
 
-JIT::EntryFn JIT::Linker::findEntry(const std::string &name = "code") {
+JIT::EntryFn JIT::Linker::findEntry(const std::string &name) {
   auto symbol = compileLayer.findSymbol(mangle(name), true);
   assert(symbol);
   auto entryAddr = symbol.getAddress();
@@ -87,17 +87,17 @@ JIT::Pipeline::Pipeline(const BFVM::Config &config) :
   machine(llvm::EngineBuilder().selectTarget()),
   linker(config, *machine, context) {}
 
-std::unique_ptr<BFVM::Handle> JIT::Pipeline::compile(IR::Graph &graph) {
-  auto module = std::make_unique<llvm::Module>("bf", context);
+std::unique_ptr<BFVM::Handle> JIT::Pipeline::compile(IR::Graph &graph, const std::string &name) {
+  auto module = std::make_unique<llvm::Module>("jit", context);
   Backend::LLVM::ModuleCompiler moduleCompiler(config, *machine, context, *module);
   DIAG_FWD(moduleCompiler)
-  moduleCompiler.compileGraph(graph);
+  moduleCompiler.compileGraph(graph, name);
   DIAG_FWD(linker)
   auto key = linker.addModule(std::move(module));
   return std::make_unique<Handle>(
     key,
     *this,
-    linker.findEntry()
+    linker.findEntry(name)
   );
 }
 

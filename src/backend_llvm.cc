@@ -66,20 +66,11 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
     module
   );
 
-  bfMainType = llvm::FunctionType::get(
+  fragmentType = llvm::FunctionType::get(
     cellPtrType,
     {contextPtrType, cellPtrType},
     false
   );
-
-  bfMainFunction = llvm::Function::Create(
-    bfMainType,
-    llvm::Function::ExternalLinkage,
-    "code",
-    module
-  );
-
-  bfMainFunction->addAttribute(2, llvm::Attribute::NoAlias);
 }
 
 void Backend::LLVM::ModuleCompiler::optimize() {
@@ -111,10 +102,18 @@ void Backend::LLVM::ModuleCompiler::optimize() {
   passManager.run(module);
 }
 
-void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph &graph) {
+void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph &graph, const std::string &name) {
   graph.clearPassData();
 
   DIAG(eventStart, "Translate")
+
+  auto fragmentFunction = llvm::Function::Create(
+    fragmentType,
+    llvm::Function::ExternalLinkage,
+    name,
+    module
+  );
+  fragmentFunction->addAttribute(2, llvm::Attribute::NoAlias);
 
   int numBlocks = graph.blocks.size();
   for (int b = 0; b < numBlocks; b++) {
@@ -122,7 +121,7 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph &graph) {
     llvm::BasicBlock *newBlock = llvm::BasicBlock::Create(
       context,
       block->getLabel(),
-      bfMainFunction
+      fragmentFunction
     );
     block->passData = static_cast<void*>(newBlock);
 
@@ -132,7 +131,7 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph &graph) {
         switch ((IR::RegKind) reg) {
           case IR::R_PTR:
             builder.CreateStore(
-              bfMainFunction->getArg(1),
+              fragmentFunction->getArg(1),
               regValues[reg] = builder.CreateAlloca(cellPtrType)
             );
             break;
@@ -240,13 +239,13 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
       );
     case IR::I_PUTCHAR:
       return builder.CreateCall(putcharFunction, {
-        bfMainFunction->args().begin(),
+        builder.GetInsertBlock()->getParent()->args().begin(),
         getValue(inst->inputs[0], intType)
       });
     case IR::I_GETCHAR:
       return builder.CreateIntCast(
         builder.CreateCall(getcharFunction, {
-          bfMainFunction->args().begin()
+          builder.GetInsertBlock()->getParent()->args().begin()
         }),
         cellType,
         false
@@ -280,6 +279,8 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
       );
     case IR::I_RET:
       return builder.CreateRet(getValue(inst->inputs[0], cellPtrType));
+    case IR::I_TAG:
+      abort();
   }
   abort();
 }

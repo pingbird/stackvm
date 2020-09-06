@@ -5,7 +5,7 @@
 #include "bfvm.h"
 
 namespace AOT {
-  struct AOTPipeline {
+  struct Compiler {
     
   };
 }

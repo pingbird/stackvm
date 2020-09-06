@@ -24,7 +24,7 @@ namespace BFVM {
 
   struct Interpreter {
     static std::unique_ptr<Interpreter> initialize(const Config &config);
-    virtual std::unique_ptr<BFVM::Handle> compile(const std::string &code) = 0;
+    virtual std::unique_ptr<BFVM::Handle> compile(const std::string &code, const std::string &name) = 0;
     virtual void run(BFVM::Handle &handle) = 0;
   protected:
     explicit Interpreter();
