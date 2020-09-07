@@ -92,6 +92,7 @@ struct Builder {
           b.pushGoto(condBlock);
 
           b.setBlock(nextBlock);
+          b.pushStrPtr(b.pushImm(0));
           break;
         } case BF::I_END:
           pos--;

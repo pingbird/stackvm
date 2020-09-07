@@ -26,7 +26,8 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
   builder(context),
   context(context),
   module(module),
-  functionPassManager(&module)
+  functionPassManager(&module),
+  regValues{nullptr}
 {
   intType = llvm::Type::getInt32Ty(context);
   voidType = llvm::Type::getVoidTy(context);
@@ -49,7 +50,7 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
   putcharFunction = llvm::Function::Create(
     putcharType,
     llvm::Function::ExternalLinkage,
-    "native_putchar",
+    "bf_putchar",
     module
   );
 
@@ -62,7 +63,7 @@ Backend::LLVM::ModuleCompiler::ModuleCompiler(
   getcharFunction = llvm::Function::Create(
     getcharType,
     llvm::Function::ExternalLinkage,
-    "native_getchar",
+    "bf_getchar",
     module
   );
 
@@ -205,7 +206,7 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
     case IR::I_IMM: {
       auto type = Opt::resolveType(inst);
       auto out = llvm::ConstantInt::get(
-        sizeType,
+        convertType(type),
         inst->immValue,
         type == IR::T_SIZE
       );

@@ -3,15 +3,15 @@
 
 extern "C" {
   char *code(void *context, char *mem);
-  void native_putchar(void *context, int c);
-  int native_getchar(void *context);
+  void bf_putchar(void *context, int c);
+  int bf_getchar(void *context);
 }
 
-void native_putchar(void *context, int c) {
+void bf_putchar(void *context, int c) {
   putchar(c);
 }
 
-int native_getchar(void *context) {
+int bf_getchar(void *context) {
   int c = getchar();
   if (c == -1) return 0;
   return c;

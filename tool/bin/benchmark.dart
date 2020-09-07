@@ -13,11 +13,11 @@ class BenchmarkResult {
   String outputHash;
 }
 
-Future<Process> startLinuxProcess(String command, List<String> args) {
+Future<Process> startLinuxProcess(String command, List<String> args, {String workingDirectory}) {
   return Process.start(Platform.isLinux ? command : 'wsl', [
     if (!Platform.isLinux) command,
     ...args,
-  ]);
+  ], workingDirectory: workingDirectory);
 }
 
 Future<BenchmarkResult> runBenchmark({
@@ -92,6 +92,13 @@ void main(List<String> args) async {
   var yamlText = await File('config.yaml').readAsString();
   var editor = YamlEditor(yamlText);
   var yamlData = loadYaml(yamlText);
+
+  var res = await startLinuxProcess('make', ['-j', '12'], workingDirectory: 'cmake-build-release');
+  unawaited(stderr.addStream(res.stderr));
+  unawaited(res.stdout.drain());
+  if (await res.exitCode != 0) {
+    exit(1);
+  }
 
   var benchmarks = yamlData['benchmarks'] as YamlList;
   for (var i = 0; i < benchmarks.length; i++) {

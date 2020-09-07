@@ -182,8 +182,8 @@ struct CompileContext {
       jit = std::make_unique<JIT::Pipeline>(config);
       DIAG_FWD(*jit)
     }
-    jit->addSymbol("native_putchar", bfPutchar);
-    jit->addSymbol("native_getchar", bfGetchar);
+    jit->addSymbol("bf_putchar", bfPutchar);
+    jit->addSymbol("bf_getchar", bfGetchar);
     return jit->compile(graph, name);
   }
 
