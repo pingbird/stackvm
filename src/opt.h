@@ -15,4 +15,6 @@ namespace Opt {
   IR::TypeId resolveType(IR::Inst *inst);
 
   bool equal(IR::Inst *a, IR::Inst *b);
+
+  void frame(IR::Graph &graph);
 }

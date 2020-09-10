@@ -177,7 +177,7 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph &graph, const std::st
   DIAG_ARTIFACT("llvm_ir_unopt.ll", printRaw(module))
   DIAG(eventStart, "Optimize LLVM")
 
-  optimize();
+  // optimize();
 
   DIAG(eventFinish, "Optimize LLVM")
   DIAG_ARTIFACT("llvm_ir_opt.ll", printRaw(module))

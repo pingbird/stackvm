@@ -7,5 +7,5 @@
 #include "bf.h"
 
 namespace Lowering {
-  std::unique_ptr<IR::Graph> buildProgram(const BFVM::Config &config, const std::vector<BF::Inst> &program);
+  std::unique_ptr<IR::Graph> buildProgram(const BFVM::Config &config, const BF::Program &program);
 }

@@ -75,6 +75,10 @@ void Opt::validate(Graph &graph) {
           assert(cur->inputs.empty());
           break;
         case I_GEP:
+          assert(resolveType(cur->inputs[0]) == T_PTR);
+          assert(resolveType(cur->inputs[1]) == T_SIZE);
+          assert(cur->inputs.size() == 2);
+          break;
         case I_SUB:
         case I_ADD:
         case I_STR:
@@ -101,6 +105,8 @@ void Opt::validate(Graph &graph) {
           assert(cur->inputs.size() == 1);
           assert(cur->next == nullptr);
           assert(block->successors.empty());
+          break;
+        case I_TAG:
           break;
       }
 
