@@ -1,7 +1,7 @@
 benchmarks:
   -
-    baseline: 68
-    batch: 625000
+    baseline: 65
+    batch: 4166667
     name: hello world
     output: a0b65939670bc2c010f4d5d6a0b3e4e4590fb92b
     src: samples/hello.b
@@ -11,51 +11,60 @@ benchmarks:
     src: samples/semihash.b
     input: samples/semihash.in
     output: da39a3ee5e6b4b0d3255bfef95601890afd80709
-    batch: 666667
-    baseline: 45
+    batch: 7142858
+    baseline: 44
 
   -
     name: harmonic
     src: samples/harmonic.b
     output: b6589fc6ab0dc82cf12099d1c2d40ab994e8410c
-    batch: 90091
-    baseline: 7569
+    batch: 892858
+    baseline: 7359
 
   -
     name: 8 bit cell size
     src: samples/cell_size.b
     width: 8
     output: 94cfcfa4ce6f757b8211ef5a2882076d7fc4f7bd
-    batch: 666667
-    baseline: 33
+    batch: 7142858
+    baseline: 35
 
   -
     name: 16 bit cell size
     src: samples/cell_size.b
     width: 16
     output: d2bb3c52eaf4286637d9a3df1e6024c2aaeb7728
-    batch: 625000
-    baseline: 37
+    batch: 3225807
+    baseline: 34
 
   -
     name: 32 bit cell size
     src: samples/cell_size.b
     width: 32
     output: 85c954c43002504b11cc5e239de7c6d0cc96e522
-    batch: 714286
-    baseline: 34
+    batch: 6250000
+    baseline: 37
 
   -
     name: mandlebrot
     src: samples/mandlebrot.b
     output: b77a017f811831f0b74e0d69c08b78e620dbda2b
-    batch: 2
-    baseline: 724760250
+    batch: 15
+    baseline: 706432126
 
   -
     width: 16
     name: synthetic alias
     src: samples/synthetic_alias.b
     output: 58a74e7d129257f8b0be51f9aa10f8cbb60db621
-    batch: 3430
-    baseline: 291991
+    batch: 34200
+    baseline: 287140
+
+  -
+    name: self interpreter
+    src: samples/self_interpreter.b
+    input: samples/hello.b
+    output: a0b65939670bc2c010f4d5d6a0b3e4e4590fb92b
+    batch: 21044
+    baseline: 440832
+

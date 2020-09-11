@@ -131,7 +131,7 @@ void main(List<String> args) async {
         exit(1);
       }
 
-      batch = (1000000000 / res.time).ceil();
+      batch = (10000000000 / res.time).ceil();
 
       editor.update(['benchmarks', i, 'batch'], batch);
     }
