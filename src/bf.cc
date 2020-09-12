@@ -1,3 +1,5 @@
+#include <map>
+#include <cassert>
 #include "bf.h"
 
 using namespace BF;
@@ -5,8 +7,8 @@ using namespace BF;
 bool Seek::equals(const Seek &other) const {
   if (
     other.offset != offset ||
-      other.loops.size() != loops.size()
-    ) {
+    other.loops.size() != loops.size()
+  ) {
     return false;
   }
 
@@ -20,44 +22,130 @@ bool Seek::equals(const Seek &other) const {
   return true;
 }
 
+struct LoopInfo {
+  bool pure = true;
+};
+
+struct Parser {
+  Program &program;
+  const std::string &str;
+
+  Parser(Program &program, const std::string &str) : program(program), str(str) {}
+
+  size_t pos = 0;
+  size_t loopIndex = 1;
+
+  std::vector<LoopInfo> loopCache;
+
+  size_t scan() {
+    size_t loop = loopCache.size();
+    loopCache.emplace_back();
+    for (;;) {
+      switch (str[pos]) {
+        case '+':
+        case '-':
+          loopCache[loop].pure = false;
+          break;
+        case '[': {
+          pos++;
+          auto child = scan();
+          loopCache[loop].pure = loopCache[loop].pure && loopCache[child].pure;
+          if (str[pos]) {
+            assert(str[pos] == ']');
+            break;
+          }
+          // Fall through
+        } case ']':
+        case 0:
+          return loop;
+        default:
+          break;
+      }
+      pos++;
+    }
+  }
+
+  void parseSeek(Seek &seek) {
+    for (;;) {
+      switch (str[pos]) {
+        case '<':
+          if (seek.loops.empty()) {
+            seek.offset--;
+          } else {
+            seek.loops[seek.loops.size() - 1].offset--;
+          }
+          break;
+        case '>':
+          if (seek.loops.empty()) {
+            seek.offset++;
+          } else {
+            seek.loops[seek.loops.size() - 1].offset++;
+          }
+          break;
+        case '[':
+          if (!loopCache[loopIndex].pure) {
+            return;
+          }
+          pos++;
+          loopIndex++;
+          parseSeek(seek.loops.emplace_back().seek);
+          if (str[pos]) {
+            assert(str[pos] == ']');
+            pos++;
+          } else {
+            program.block.push_back(I_END);
+          }
+          continue;
+        case 0:
+        case ']':
+        case '+':
+        case '-':
+        case '.':
+        case ',':
+          return;
+        default:
+          break;
+      }
+      pos++;
+    }
+  }
+
+  void parse() {
+    for (;;) {
+      switch (str[pos]) {
+        case '+': program.block.push_back(I_ADD); break;
+        case '-': program.block.push_back(I_SUB); break;
+        case '[':
+          if (!loopCache[loopIndex].pure) {
+            loopIndex++;
+            program.block.push_back(I_LOOP);
+            break;
+          }
+          // Fall through
+        case '<':
+        case '>': {
+          size_t startPos = pos;
+          parseSeek(program.seeks.emplace_back());
+          program.block.push_back(I_SEEK);
+          assert(pos != startPos);
+          continue;
+        } case ']': program.block.push_back(I_END); break;
+        case '.': program.block.push_back(I_PUTCHAR); break;
+        case ',': program.block.push_back(I_GETCHAR); break;
+        case 0: return;
+        default: break;
+      }
+      pos++;
+    }
+  }
+};
+
 Program BF::parse(const std::string &str) {
   Program program;
-  for (const char *c = str.c_str(); *c;) {
-    switch (*c) {
-      case '+': program.block.push_back(I_ADD); break;
-      case '-': program.block.push_back(I_SUB); break;
-      case '<': {
-        program.block.push_back(I_SEEK);
-        int offset = 1;
-        c++;
-        while (*c == '<') {
-          offset++;
-          c++;
-        }
-        program.seeks.emplace_back();
-        auto &seek = program.seeks[program.seeks.size() - 1];
-        seek.offset = -offset;
-        continue;
-      } case '>': {
-        program.block.push_back(I_SEEK);
-        int offset = 1;
-        c++;
-        while (*c == '>') {
-          offset++;
-          c++;
-        }
-        program.seeks.emplace_back();
-        auto &seek = program.seeks[program.seeks.size() - 1];
-        seek.offset = offset;
-        continue;
-      } case '[': program.block.push_back(I_LOOP); break;
-      case ']': program.block.push_back(I_END); break;
-      case '.': program.block.push_back(I_PUTCHAR); break;
-      case ',': program.block.push_back(I_GETCHAR); break;
-      default: break;
-    }
-    c++;
-  }
+  Parser parser(program, str);
+  parser.scan();
+  parser.pos = 0;
+  parser.parse();
   return program;
 }
 
@@ -98,7 +186,7 @@ std::string BF::printSeek(const Seek &seek) {
     out += '[';
     out.append(printSeek(loop.seek));
     out += ']';
-    printSeekOffset(out, seek.offset);
+    printSeekOffset(out, loop.offset);
   }
   return out;
 }

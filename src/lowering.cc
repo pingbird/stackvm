@@ -104,8 +104,10 @@ struct Builder {
         } case BF::I_LOOP: {
           auto blocks = openLoop();
           buildBody();
-          auto endInst = program.block[pos++];
-          assert(endInst == BF::I_END);
+          if (pos < program.block.size()) {
+            auto endInst = program.block[pos++];
+            assert(endInst == BF::I_END);
+          }
           closeLoop(blocks);
           break;
         } case BF::I_END:
