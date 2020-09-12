@@ -42,6 +42,8 @@ struct Parser {
     loopCache.emplace_back();
     for (;;) {
       switch (str[pos]) {
+        case ',':
+        case '.':
         case '+':
         case '-':
           loopCache[loop].pure = false;
