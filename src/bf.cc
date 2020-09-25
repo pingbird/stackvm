@@ -23,7 +23,7 @@ bool Seek::equals(const Seek &other) const {
   return true;
 }
 
-LoopBalance Seek::getBalance() const {
+LoopBalance SeekData::getBalance() const {
   uint8_t balance = LB_BALANCED;
 
   int totalOffset = offset;
@@ -170,8 +170,8 @@ Program BF::parse(const std::string &str) {
 std::string BF::print(const Program &program) {
   std::string str;
   int seekIndex = 0;
-  for (char inst : program.block) {
-    switch (inst) {
+  for (auto inst : program.instructions) {
+    switch (inst.kind) {
       case I_ADD: str.push_back('+'); break;
       case I_SUB: str.push_back('-'); break;
       case I_SEEK: str.append(printSeek(program.seeks[seekIndex++])); break;

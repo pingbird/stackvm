@@ -5,7 +5,6 @@
 #include <unordered_set>
 
 namespace BF {
-
   using RangePos = int32_t;
 
   struct Range {
@@ -272,20 +271,20 @@ namespace BF {
     LoopInfo() = default;
   };
 
-  struct SeekLoop;
-  struct Seek {
+  struct Seek;
+  struct SeekData {
     int offset = 0;
-    std::vector<SeekLoop> loops;
+    Seek* loop;
     [[nodiscard]] bool equals(const Seek &other) const;
     [[nodiscard]] LoopBalance getBalance() const;
   };
 
-  struct SeekLoop {
-    Seek seek;
-    int offset = 0;
+  struct Seek {
+    SeekData* data;
+    Seek* next;
   };
 
-  enum Inst {
+  enum InstKind : uint8_t {
     I_ADD,
     I_SUB,
     I_SEEK,
@@ -295,9 +294,16 @@ namespace BF {
     I_GETCHAR,
   };
 
+  struct Inst {
+    InstKind kind;
+    union {
+      Seek* seek;
+    };
+  };
+
   struct Program {
     std::vector<Seek> seeks;
-    std::vector<Inst> block;
+    std::vector<Inst> instructions;
   };
 
   Program parse(const std::string &str);
