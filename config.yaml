@@ -68,3 +68,16 @@ benchmarks:
     batch: 21044
     baseline: 440832
 
+  -
+    name: signed math
+    src: samples/signedmath.b
+    output: 6a0967cbc5595edf4ef606ea16ca9d314c76b8bc
+    batch: 1190477
+    baseline: 2622
+
+  -
+    name: sierpinski
+    src: samples/sierpinski.b
+    output: 74e24c1e949d69e2cd47c5905140cc068de61b9e
+    batch: 127
+    baseline: 77585895
