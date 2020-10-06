@@ -1,6 +1,5 @@
 #include <map>
 #include <cassert>
-#include <memory>
 #include "bf.h"
 
 using namespace BF;
@@ -23,24 +22,9 @@ bool Seek::equals(const Seek &other) const {
   return true;
 }
 
-LoopBalance SeekData::getBalance() const {
-  uint8_t balance = LB_BALANCED;
-
-  int totalOffset = offset;
-
-  for (const SeekLoop &loop : loops) {
-    balance |= loop.seek.getBalance();
-    totalOffset += loop.offset;
-  }
-
-  if (totalOffset > 0) {
-    balance |= LB_RIGHT;
-  } else if (totalOffset < 0) {
-    balance |= LB_LEFT;
-  }
-
-  return balance;
-}
+struct LoopInfo {
+  bool pure = true;
+};
 
 struct Parser {
   Program &program;
@@ -170,8 +154,8 @@ Program BF::parse(const std::string &str) {
 std::string BF::print(const Program &program) {
   std::string str;
   int seekIndex = 0;
-  for (auto inst : program.instructions) {
-    switch (inst.kind) {
+  for (char inst : program.block) {
+    switch (inst) {
       case I_ADD: str.push_back('+'); break;
       case I_SUB: str.push_back('-'); break;
       case I_SEEK: str.append(printSeek(program.seeks[seekIndex++])); break;
