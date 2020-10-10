@@ -39,7 +39,6 @@ bool Opt::equal(IR::Inst *a, IR::Inst *b) {
     case I_PUTCHAR:
     case I_GOTO:
     case I_RET:
-    case I_TAG:
     case I_STR:
       abort();
   }
@@ -63,7 +62,6 @@ void Opt::fold(FoldRules *rules, Inst *inst) {
     case I_ADD:
     case I_SUB:
     case I_GEP:
-    case I_TAG:
       break;
   }
 

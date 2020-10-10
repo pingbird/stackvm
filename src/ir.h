@@ -9,9 +9,10 @@
 namespace IR {
   enum RegKind {
     R_PTR,
+    R_DEF,
   };
 
-  static const int NUM_REGS = R_PTR + 1;
+  static const int NUM_REGS = R_DEF + 1;
   extern const char *regNames[NUM_REGS];
 
   enum InstKind {
@@ -30,7 +31,6 @@ namespace IR {
     I_IF,
     I_GOTO,
     I_RET,
-    I_TAG,
   };
 
   typedef uint16_t TypeId;

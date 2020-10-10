@@ -8,7 +8,7 @@ using namespace IR;
 
 struct BlockState {
   Inst *states[NUM_REGS] = {nullptr};
-  Inst *dep = nullptr;
+  Inst *dep[NUM_REGS] = {nullptr};
 };
 
 void Opt::resolveRegs(Graph &graph) {
@@ -32,10 +32,10 @@ void Opt::resolveRegs(Graph &graph) {
           if (value != nullptr) {
             inst->rewriteWith(value);
           } else {
-            if (state.dep != nullptr) {
-              inst->rewriteWith(state.dep);
+            if (state.dep[inst->immReg] != nullptr) {
+              inst->rewriteWith(state.dep[inst->immReg]);
             } else {
-              state.dep = inst;
+              state.dep[inst->immReg] = inst;
             }
           }
           break;
@@ -52,8 +52,8 @@ void Opt::resolveRegs(Graph &graph) {
 
     builder.setBlock(block, nullptr);
 
-    Inst *value = state.dep;
-    state.dep = nullptr;
+    Inst *value = state.dep[reg];
+    state.dep[reg] = nullptr;
 
     if (value == nullptr) {
       value = builder.pushReg(reg);

@@ -151,10 +151,10 @@ struct CompileContext {
 
   std::unique_ptr<IR::Graph> buildGraph(const std::string &code) {
     DIAG(eventStart, "Parse")
-    auto program = BF::parse(code);
+    auto program = BF::Program::parse(code);
     DIAG(eventFinish, "Parse")
 
-    DIAG_ARTIFACT("bf.txt", BF::print(program))
+    DIAG_ARTIFACT("bf.txt", program.print())
 
     DIAG(eventStart, "Lower")
     auto graph = Lowering::buildProgram(config, program);

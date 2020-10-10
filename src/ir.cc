@@ -21,8 +21,9 @@ std::string IR::typeString(TypeId type) {
   }
 }
 
-const char *IR::regNames[1] = {
+const char *IR::regNames[2] = {
   "ptr",
+  "def",
 };
 
 void Inst::remove() {

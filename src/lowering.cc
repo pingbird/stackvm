@@ -1,5 +1,6 @@
 #include <iostream>
 #include <string>
+#include <unordered_map>
 
 #include "bf.h"
 #include "ir.h"
@@ -29,26 +30,29 @@ struct Builder {
   IR::Builder b;
   int pos = 0;
   int seekIndex = 0;
+  int defIndex = 0;
 
-  void buildOffset(int offset) {
+  std::unordered_map<BF::DefIndex, IR::Inst*> defs;
+
+  void buildOffset(int offset, IR::RegKind reg = IR::R_PTR) {
     if (!offset) return;
     b.pushSetReg(
-      IR::R_PTR,
+      reg,
       b.pushGep(
-        b.pushReg(IR::R_PTR),
+        b.pushReg(reg),
         b.pushImm(offset, IR::T_SIZE)
       )
     );
   }
 
-  LoopBlocks openLoop() {
+  LoopBlocks openLoop(IR::RegKind reg = IR::R_PTR) {
     LoopBlocks blocks(&graph);
 
     b.pushGoto(blocks.cond);
 
     b.setBlock(blocks.cond);
     b.pushIf(
-      b.pushLdPtr(),
+      b.pushLd(b.pushReg(reg)),
       blocks.loop,
       blocks.next
     );
@@ -57,20 +61,31 @@ struct Builder {
     return blocks;
   }
 
-  void closeLoop(LoopBlocks &blocks) {
+  void closeLoop(LoopBlocks &blocks, IR::RegKind reg = IR::R_PTR) {
     b.pushGoto(blocks.cond);
     b.setBlock(blocks.next);
-    b.pushStrPtr(b.pushImm(0));
+    b.pushStr(b.pushReg(reg), b.pushImm(0));
   }
 
   void buildSeek(const BF::Seek &seek) {
-    buildOffset(seek.offset);
+    buildOffset(seek.offset, IR::R_DEF);
     for (const BF::SeekLoop &loop : seek.loops) {
-      auto blocks = openLoop();
+      auto blocks = openLoop(IR::R_DEF);
       buildSeek(loop.seek);
-      closeLoop(blocks);
-      buildOffset(loop.offset);
+      closeLoop(blocks, IR::R_DEF);
+      buildOffset(loop.offset, IR::R_DEF);
     }
+  }
+
+  void buildDef(const BF::Def &def) {
+    for (auto sub : def.body) {
+      if (auto def = std::get_if<BF::Def>(&sub)) {
+        buildDef(*def);
+      } else if (auto seek = std::get_if<BF::Seek>(&sub)) {
+        buildSeek(*seek);
+      }
+    }
+    defs[def.index] = b.pushReg(IR::R_DEF);
   }
 
   void buildBody() {
@@ -98,8 +113,14 @@ struct Builder {
           value = b.pushSub(value, b.pushImm(count));
           b.pushStrPtr(value);
           break;
+        } case BF::I_DEF: {
+          b.pushSetReg(IR::R_DEF, b.pushReg(IR::R_PTR));
+          buildDef(program.defs[defIndex++]);
+          break;
         } case BF::I_SEEK: {
-          buildSeek(program.seeks[seekIndex++]);
+          IR::Inst *defReg = defs[program.seeks[seekIndex++]];
+          assert(defReg != nullptr);
+          b.pushSetReg(IR::R_PTR, defReg);
           break;
         } case BF::I_LOOP: {
           auto blocks = openLoop();

@@ -106,8 +106,6 @@ void Opt::validate(Graph &graph) {
           assert(cur->next == nullptr);
           assert(block->successors.empty());
           break;
-        case I_TAG:
-          break;
       }
 
       cur = cur->next;

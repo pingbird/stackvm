@@ -129,12 +129,15 @@ void Backend::LLVM::ModuleCompiler::compileGraph(IR::Graph &graph, const std::st
     if (b == 0) {
       builder.SetInsertPoint(newBlock);
       for (int reg = 0; reg < IR::NUM_REGS; reg++) {
-        switch ((IR::RegKind) reg) {
+        switch ((IR::RegKind)reg) {
           case IR::R_PTR:
             builder.CreateStore(
               fragmentFunction->getArg(1),
-              regValues[reg] = builder.CreateAlloca(cellPtrType)
+              regValues[IR::R_PTR] = builder.CreateAlloca(cellPtrType)
             );
+            break;
+          case IR::R_DEF:
+            regValues[IR::R_DEF] = builder.CreateAlloca(cellPtrType);
             break;
         }
       }
@@ -196,6 +199,7 @@ void Backend::LLVM::ModuleCompiler::compileBlock(IR::Block &block) {
 llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
   switch (inst->kind) {
     case IR::I_REG:
+      assert(regValues[inst->immReg] != nullptr);
       return builder.CreateLoad(regValues[inst->immReg]);
     case IR::I_SETREG:
       return builder.CreateStore(
@@ -280,8 +284,6 @@ llvm::Value *Backend::LLVM::ModuleCompiler::compileInst(IR::Inst *inst) {
       );
     case IR::I_RET:
       return builder.CreateRet(getValue(inst->inputs[0], cellPtrType));
-    case IR::I_TAG:
-      abort();
   }
   abort();
 }
