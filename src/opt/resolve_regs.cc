@@ -92,7 +92,7 @@ void Opt::resolveRegs(Graph &graph) {
   for (Block *block : graph.blocks) {
     auto &state = states[block];
     for (int reg = 0; reg < NUM_REGS; reg++) {
-      if (state.dep != nullptr) {
+      if (state.dep[reg] != nullptr) {
         resolve(block, (RegKind)reg);
       }
     }
