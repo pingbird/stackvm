@@ -166,9 +166,6 @@ namespace IR {
     bool open = true;
     bool orphan = false;
 
-    std::vector<Block*> predecessors;
-    std::vector<Block*> successors;
-
     void* passData = nullptr;
 
     void clearPassData();
@@ -176,6 +173,45 @@ namespace IR {
     void remove();
     void insertAfter(Inst *inst, Inst *after);
     void insertBefore(Inst *inst, Inst *before);
+
+    std::vector<Block*> predecessors;
+    std::vector<Block*> successors;
+
+    Block *dominator;
+    uint32_t dfsIn;
+    uint32_t dfsOut;
+
+    void setDominator(Block *block) {
+      dominator = block;
+    }
+
+    void removeDominator() {
+      dominator = nullptr;
+    }
+
+    void assignDominators(Block *predecessor) {
+      if (dominator == nullptr) {
+        setDominator(predecessor);
+      } else if (predecessor->dominator != nullptr) {
+        Block *left = dominator;
+        Block *right = predecessor;
+
+        while (left != right) {
+          if (left->id > right->id) {
+            left = left->dominator;
+          } else {
+            right = right->dominator;
+          }
+          assert(left != nullptr);
+          assert(right != nullptr);
+        }
+
+        if (dominator != left) {
+          removeDominator();
+          setDominator(left);
+        }
+      }
+    }
 
     void addSuccessor(Block *successor);
 
