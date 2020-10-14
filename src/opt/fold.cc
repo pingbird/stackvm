@@ -1,4 +1,6 @@
 #include "fold.h"
+#include "../opt.h"
+
 
 using namespace IR;
 using namespace Opt;
@@ -46,29 +48,34 @@ bool Opt::equal(IR::Inst *a, IR::Inst *b) {
   abort();
 }
 
-void Opt::fold(FoldRules *rules, Inst *inst) {
-  switch (inst->kind) {
-    case I_NOP:
-    case I_IMM:
-    case I_LD:
-    case I_STR:
-    case I_REG:
-    case I_SETREG:
-    case I_GETCHAR:
-    case I_PUTCHAR:
-    case I_PHI:
-    case I_IF:
-    case I_GOTO:
-    case I_RET:
-    case I_ADD:
-    case I_SUB:
-    case I_GEP:
-    case I_TAG:
+void foldInst(FoldState &state, Inst *inst) {
+  size_t inputCount = inst->inputs.size();
+  Inst *left = inputCount < 1 ? nullptr : inst->inputs[0];
+  Inst *right = inputCount < 2 ? nullptr : inst->inputs[1];
+  InstKind leftKind = left == nullptr ? I_NOP : left->kind;
+  InstKind rightKind = right == nullptr ? I_NOP : right->kind;
+  FoldKey key = foldKey(inst->kind, leftKind, rightKind);
+  FoldKey lastKey = 0;
+  for (unsigned int i = 0; i < 4; i++) {
+    FoldKey maskedKey = key;
+    if ((i & 1u) != 0) {
+      maskedKey &= ~0xFFu;
+    } else if ((i & 10u) != 0) {
+      maskedKey &= ~0xFF00u;
+    }
+    if (maskedKey == lastKey) continue;
+    lastKey = maskedKey;
+    if (state.rules->folders.count(maskedKey)) {
+      state.result = FR_NONE;
+      state.rules->folders[maskedKey](state);
       break;
+    }
   }
+}
 
-  Inst *left = inst->inputs[0];
-  Inst *right = inst->inputs[1];
-
-  FoldFn folder = nullptr;
+void fold(Graph &graph, FoldRules *rules) {
+  FoldState state(graph, rules);
+  for (Block *b : graph.blocks) {
+    
+  }
 }

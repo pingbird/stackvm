@@ -10,7 +10,7 @@ namespace Opt {
     struct FoldRules;
   }
   Fold::FoldRules *defaultFoldRules();
-  void fold(Fold::FoldRules *rules, IR::Inst *inst);
+  void fold(IR::Graph &graph, Fold::FoldRules &rules);
 
   IR::TypeId resolveType(IR::Inst *inst);
 

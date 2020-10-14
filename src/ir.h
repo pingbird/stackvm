@@ -14,7 +14,7 @@ namespace IR {
   static const int NUM_REGS = R_PTR + 1;
   extern const char *regNames[NUM_REGS];
 
-  enum InstKind {
+  enum InstKind : uint8_t {
     I_NOP,
     I_IMM,
     I_ADD,
