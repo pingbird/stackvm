@@ -127,7 +127,10 @@ struct Parser {
         case '<':
         case '>': {
           size_t startPos = pos;
-          parseSeek(program.seeks.emplace_back());
+          Def& def = program.defs.emplace_back(program.nextDef++);
+          parseSeek(def.pushSeek());
+          program.block.push_back(I_DEF);
+          program.seeks.push_back(def.index);
           program.block.push_back(I_SEEK);
           assert(pos != startPos);
           continue;
@@ -142,7 +145,7 @@ struct Parser {
   }
 };
 
-Program BF::parse(const std::string &str) {
+Program Program::parse(const std::string &str) {
   Program program;
   Parser parser(program, str);
   parser.scan();
@@ -151,19 +154,26 @@ Program BF::parse(const std::string &str) {
   return program;
 }
 
-std::string BF::print(const Program &program) {
+std::string Program::print() const {
   std::string str;
   int seekIndex = 0;
-  for (char inst : program.block) {
+  int defIndex = 0;
+  for (Inst inst : block) {
     switch (inst) {
       case I_ADD: str.push_back('+'); break;
       case I_SUB: str.push_back('-'); break;
-      case I_SEEK: str.append(printSeek(program.seeks[seekIndex++])); break;
       case I_LOOP: str.push_back('['); break;
       case I_END: str.push_back(']'); break;
       case I_PUTCHAR: str.push_back('.'); break;
       case I_GETCHAR: str.push_back(','); break;
-      default: break;
+      case I_DEF:
+        str += '{';
+        str += defs[defIndex++].print();
+        str += '}';
+        break;
+      case I_SEEK:
+        str += printDefIndex(seeks[seekIndex++]);
+        break;
     }
   }
   return str;
@@ -181,14 +191,51 @@ void printSeekOffset(std::string &out, int offset) {
   }
 }
 
-std::string BF::printSeek(const Seek &seek) {
+std::string Seek::print() const {
   std::string out;
-  printSeekOffset(out, seek.offset);
-  for (auto &loop : seek.loops) {
+  printSeekOffset(out, offset);
+  for (auto &loop : loops) {
     out += '[';
-    out.append(printSeek(loop.seek));
+    out.append(loop.seek.print());
     out += ']';
     printSeekOffset(out, loop.offset);
   }
   return out;
+}
+
+std::string Def::print() const {
+  std::string out;
+  for (int i = 0; i < body.size(); i++) {
+    if (auto def = std::get_if<Def>(&body[i])) {
+      if (i == body.size() - 1) {
+        out += def->print();
+      } else {
+        out += '{';
+        out += def->print();
+        out += '}';
+      }
+    } else if (auto seek = std::get_if<Seek>(&body[i])) {
+      out += seek->print();
+    }
+  }
+  out += printDefIndex(index);
+  return out;
+}
+
+Def::Def(DefIndex index) : index(index) {}
+
+Def &Def::pushDef(DefIndex subIndex) {
+  return std::get<0>(body.emplace_back(Def(subIndex)));
+}
+
+Seek &Def::pushSeek() {
+  return std::get<1>(body.emplace_back(Seek()));
+}
+
+std::string BF::printDefIndex(DefIndex index) {
+  if (index < 27) {
+    return std::string(1, index + 'a');
+  } else {
+    return std::string(1, index + 'a') + "_" + std::to_string(index / 27);
+  }
 }

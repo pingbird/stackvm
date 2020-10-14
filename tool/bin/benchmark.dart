@@ -35,12 +35,13 @@ Future<BenchmarkResult> runBenchmark({
     '-w', '$width',
     '-p', '$batch',
     '-d', 'temp',
+    '-q',
     '-m', '0,2048',
     program,
   ]);
 
   unawaited(proc.stdout.drain());
-  unawaited(proc.stderr.drain());
+  var stderrFinish = stderr.addStream(proc.stderr);
   proc.stdin.add(input);
   await proc.stdin.flush();
   await proc.stdin.close();
@@ -56,7 +57,7 @@ Future<BenchmarkResult> runBenchmark({
     proc.kill(ProcessSignal.sigkill);
     return null;
   } else if (exitCode != 0) {
-    await stderr.addStream(proc.stderr);
+    await stderrFinish;
     stderr.writeln('stackvm failed with exit code $exitCode');
     exit(1);
   }
