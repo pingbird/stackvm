@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include <cassert>
+#include <unordered_set>
 
 #include "bfvm.h"
 
@@ -177,43 +178,23 @@ namespace IR {
     std::vector<Block*> predecessors;
     std::vector<Block*> successors;
 
-    Block *dominator;
-    uint32_t dfsIn;
-    uint32_t dfsOut;
+    Block *dominator = nullptr;
 
-    void setDominator(Block *block) {
-      dominator = block;
-    }
+    Block *getDominator();
 
-    void removeDominator() {
-      dominator = nullptr;
-    }
+    bool dominatedBy(Block *block);
 
-    void assignDominators(Block *predecessor) {
-      if (dominator == nullptr) {
-        setDominator(predecessor);
-      } else if (predecessor->dominator != nullptr) {
-        Block *left = dominator;
-        Block *right = predecessor;
+    bool dominates(Block *block);
 
-        while (left != right) {
-          if (left->id > right->id) {
-            left = left->dominator;
-          } else {
-            right = right->dominator;
-          }
-          assert(left != nullptr);
-          assert(right != nullptr);
-        }
-
-        if (dominator != left) {
-          removeDominator();
-          setDominator(left);
-        }
-      }
-    }
-
+    void setDominator(Block *block);
+    void removeDominator();
     void addSuccessor(Block *successor);
+
+    void assignCommonDominator(Block *predecessor);
+    bool reaches(Block *block);
+    bool reachedBy(Block *block);
+    bool alwaysReaches(Block *block);
+    bool alwaysReachedBy(Block *block);
 
     [[nodiscard]] std::string getLabel() const;
   };
@@ -230,9 +211,15 @@ namespace IR {
 
     bool destroyed = false;
 
+    bool builtDominators = false;
+
     explicit Graph(const BFVM::Config &config);
 
     void clearPassData();
+
+    void buildDominators();
+
+    void clearDominators();
 
     void destroy();
   };

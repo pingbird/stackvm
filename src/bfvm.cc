@@ -158,7 +158,7 @@ struct CompileContext {
 
     DIAG(eventStart, "Lower")
     auto graph = Lowering::buildProgram(config, program);
-
+    graph->buildDominators();
     Opt::validate(*graph);
     DIAG(eventFinish, "Lower")
 

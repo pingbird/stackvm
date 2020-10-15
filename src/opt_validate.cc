@@ -16,6 +16,20 @@ void Opt::validate(Graph &graph) {
     // Make sure our block id hasn't been clobbered
     assert(block->id < graph.nextBlockId);
 
+    // Make sure our successors have higher block ids, except loops
+    for (Block *successor : block->successors) {
+      if (successor->id <= block->id) {
+        // If the successor has a lower block id, make sure it's a back-branch
+        assert(successor->reaches(block));
+      }
+    }
+
+    // If builtDominators is true, the dominator tree should be valid
+    if (graph.builtDominators) {
+      // Dominator should always reach us
+      assert(block->alwaysReachedBy(block->dominator));
+    }
+
     // Build list of instructions
     std::vector<Inst*> insts;
     Inst *cur = block->first;

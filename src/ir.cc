@@ -254,6 +254,139 @@ void Block::clearPassData() {
   }
 }
 
+bool Block::alwaysReaches(Block *block) {
+  std::unordered_set<Block*> visited;
+  std::vector<Block*> queue = {this};
+  bool reaches = false;
+  while (!queue.empty()) {
+    Block *cur = queue.back();
+    visited.insert(cur);
+    queue.pop_back();
+    if (cur->successors.empty()) {
+      // We hit an end node
+      return false;
+    }
+    for (Block *successor : cur->successors) {
+      if (successor == block) {
+        reaches = true;
+      } else if (!visited.contains(successor)) {
+        queue.push_back(successor);
+      }
+    }
+  }
+  return reaches;
+}
+
+bool Block::reaches(Block *block) {
+  std::unordered_set<Block*> visited;
+  std::vector<Block*> queue = {this};
+  while (!queue.empty()) {
+    Block *cur = queue.back();
+    visited.insert(cur);
+    queue.pop_back();
+    for (Block *successor : cur->successors) {
+      if (successor == block) {
+        return true;
+      } else if (!visited.contains(successor)) {
+        queue.push_back(successor);
+      }
+    }
+  }
+  return false;
+}
+
+bool Block::reachedBy(Block *block) {
+  if (block == nullptr) return true;
+  std::unordered_set<Block*> visited;
+  std::vector<Block*> queue = {this};
+  while (!queue.empty()) {
+    Block *cur = queue.back();
+    visited.insert(cur);
+    queue.pop_back();
+    for (Block *predecessor : cur->predecessors) {
+      if (predecessor == block) {
+        return true;
+      } else if (!visited.contains(predecessor)) {
+        queue.push_back(predecessor);
+      }
+    }
+  }
+  return false;
+}
+
+bool Block::alwaysReachedBy(Block *block) {
+  if (block == nullptr) return true;
+  std::unordered_set<Block*> visited;
+  std::vector<Block*> queue = {this};
+  bool reaches = false;
+  while (!queue.empty()) {
+    Block *cur = queue.back();
+    visited.insert(cur);
+    queue.pop_back();
+    if (cur->successors.empty()) {
+      // We hit an end node
+      return false;
+    }
+    for (Block *predecessor : cur->predecessors) {
+      if (predecessor == block) {
+        reaches = true;
+      } else if (!visited.contains(predecessor)) {
+        queue.push_back(predecessor);
+      }
+    }
+  }
+  return reaches;
+}
+
+void Block::assignCommonDominator(Block *predecessor) {
+  if (dominator == nullptr) {
+    setDominator(predecessor);
+  } else if (predecessor->dominator != nullptr) {
+    Block *left = dominator;
+    Block *right = predecessor;
+
+    while (left != right) {
+      if (left->id > right->id) {
+        left = left->dominator;
+      } else {
+        right = right->dominator;
+      }
+      assert(left != nullptr);
+      assert(right != nullptr);
+    }
+
+    if (dominator != left) {
+      removeDominator();
+      setDominator(left);
+    }
+  }
+}
+
+void Block::setDominator(Block *block) {
+  dominator = block;
+}
+
+void Block::removeDominator() {
+  dominator = nullptr;
+}
+
+bool Block::dominatedBy(Block *block) {
+  if (block == nullptr || block == this) return true;
+  if (dominator == nullptr) return false;
+  return dominator;
+}
+
+bool Block::dominates(Block *block) {
+  return block->dominatedBy(this);
+}
+
+Block *Block::getDominator() {
+  if (!graph->builtDominators) {
+    graph->buildDominators();
+  }
+  return dominator;
+}
+
 void Graph::destroy() {
   assert(!destroyed);
 
@@ -275,6 +408,27 @@ void Graph::clearPassData() {
 }
 
 Graph::Graph(const BFVM::Config &config) : config(config) {}
+
+void Graph::clearDominators() {
+  builtDominators = false;
+}
+
+void Graph::buildDominators() {
+  for (Block *block : blocks) {
+    block->dominator = nullptr;
+  }
+
+  for (Block *block : blocks) {
+    for (Block *predecessor : block->predecessors) {
+      if (predecessor->id < block->id) {
+        block->assignCommonDominator(predecessor);
+      }
+    }
+    assert(block->predecessors.empty() || block->dominator != nullptr);
+  }
+
+  builtDominators = true;
+}
 
 Builder::Builder(Graph &graph) : config(graph.config), graph(graph) {}
 
