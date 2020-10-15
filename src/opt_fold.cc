@@ -1,6 +1,4 @@
-#include "fold.h"
-#include "../opt.h"
-
+#include "opt_fold.h"
 
 using namespace IR;
 using namespace Opt;
@@ -41,7 +39,6 @@ bool Opt::equal(IR::Inst *a, IR::Inst *b) {
     case I_PUTCHAR:
     case I_GOTO:
     case I_RET:
-    case I_TAG:
     case I_STR:
       abort();
   }

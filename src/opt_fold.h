@@ -1,7 +1,7 @@
 #pragma once
 
 #include <unordered_map>
-#include "../opt.h"
+#include "opt.h"
 
 namespace Opt::Fold {
   typedef uint64_t FoldKey;
