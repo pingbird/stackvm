@@ -7,94 +7,118 @@
 using namespace IR;
 
 struct BlockState {
+  // The value of the register after the block has completed
   Inst *states[NUM_REGS] = {nullptr};
-  Inst *dep[NUM_REGS] = {nullptr};
 };
+
+// Search for immediate states in a block, skipping past frontiers
+static Inst *findState(Block *&dominator, RegKind reg) {
+  Inst *dominatorReg = nullptr;
+  while (dominator->predecessors.size() == 1) {
+    dominator = dominator->predecessors.at(0);
+    if (dominator->passData) {
+      auto dominatorState = (BlockState *)dominator->passData;
+      dominatorReg = dominatorState->states[reg];
+      if (dominatorReg != nullptr) {
+        break;
+      }
+    }
+  }
+  return dominatorReg;
+}
 
 void Opt::resolveRegs(Graph &graph) {
   Builder builder(graph);
+  graph.clearPassData();
 
-  std::map<Block*, BlockState> states;
+  std::vector<Inst*> unresolved;
 
+  // Collapse states and deps
   for (Block *block : graph.blocks) {
-    auto &state = states[block];
     Inst *inst = block->first;
+    auto state = new BlockState();
+    block->passData = state;
     while (inst != nullptr) {
-      Inst *next = inst->next;
       switch (inst->kind) {
-        case I_SETREG:
-          assert(inst->inputs.size() == 1);
-          state.states[inst->immReg] = inst->inputs[0];
-          inst->safeDestroy();
-          break;
         case I_REG: {
-          Inst *value = state.states[inst->immReg];
-          if (value != nullptr) {
-            inst->rewriteWith(value);
+          RegKind reg = inst->immReg;
+          if (state->states[reg] != nullptr) {
+            // Rewrite register access with previous state
+            inst->rewriteWith(state->states[reg]);
           } else {
-            if (state.dep[inst->immReg] != nullptr) {
-              inst->rewriteWith(state.dep[inst->immReg]);
+            // Search our immediate dominators for previous states
+            Block *dominator = block;
+            Inst *dominatorReg = findState(dominator, reg);
+
+            if (dominatorReg != nullptr) {
+              state->states[reg] = dominatorReg;
+              inst->rewriteWith(dominatorReg);
             } else {
-              state.dep[inst->immReg] = inst;
+              if (dominator != block) {
+                // Shift instruction up to the dominator
+                dominator->moveAfter(inst, nullptr);
+              }
+              // This is the first register access of this block, make it a dep
+              state->states[reg] = inst;
+              unresolved.push_back(inst);
             }
           }
           break;
-        }
+        } case I_SETREG:
+          state->states[inst->immReg] = inst->inputs.at(0);
+          inst->destroy();
+          break;
         default:
           break;
       }
-      inst = next;
+      inst = inst->next;
     }
   }
 
-  std::function<Inst*(Block*, RegKind)> resolve = [&](Block* block, RegKind reg) -> Inst* {
-    auto &state = states[block];
+  while (!unresolved.empty()) {
+    Inst *cur = unresolved.back();
+    unresolved.pop_back();
+    Block *block = cur->block;
+    auto state = (BlockState*)block->passData;
+    std::vector<Block*> &predecessors = block->predecessors;
+    if (predecessors.empty()) {
+      // We hit an entry, its fine for unresolved registers to be here
+      continue;
+    } else {
+      // Should not be a frontier
+      assert(predecessors.size() >= 2);
 
-    builder.setBlock(block, nullptr);
+      Opt::validate(graph);
 
-    Inst *value = state.dep[reg];
-    state.dep[reg] = nullptr;
+      // Build a new phi node with state inputs from each predecessor
+      builder.setAfter(cur);
+      Inst *phi = builder.pushPhi();
+      for (Block *predecessor : predecessors) {
+        Block *dominator = predecessor;
+        Inst *dominatorReg = findState(dominator, cur->immReg);
 
-    if (value == nullptr) {
-      value = builder.pushReg(reg);
-    }
-
-    Inst *phi = nullptr;
-
-    if (!block->predecessors.empty()) {
-      Inst *oldValue = value;
-      builder.setBlock(block, nullptr);
-      value = (phi = builder.pushPhi());
-      oldValue->rewriteWith(value);
-    }
-
-    if (state.states[reg] == nullptr) {
-      assert((unsigned int)value->kind <= I_RET);
-      state.states[reg] = value;
-    }
-
-    if (phi) {
-      for (Block *pred : block->predecessors) {
-        auto &pstate = states[pred];
-        Inst *resolved = pstate.states[reg];
-        if (resolved == nullptr) {
-          resolved = resolve(pred, reg);
-          assert(resolved->id > 0);
+        if (dominatorReg == nullptr) {
+          // Predecessor has no state, push reg instruction and enqueue it
+          builder.setAfter(dominator);
+          dominatorReg = builder.pushReg(cur->immReg);
+          unresolved.push_back(dominatorReg);
+          auto dominatorState = (BlockState*)dominator->passData;
+          dominatorState->states[cur->immReg] = dominatorReg;
         }
-        phi->inputs.push_back(resolved);
-        resolved->outputs.push_back(phi);
+
+        phi->addInput(dominatorReg);
       }
+
+      // Rewrite unresolved register with new phi
+      state->states[cur->immReg] = phi;
+      cur->rewriteWith(phi);
+
+      Opt::validate(graph);
     }
+  }
 
-    return value;
-  };
-
+  // Clean up BlockStates
   for (Block *block : graph.blocks) {
-    auto &state = states[block];
-    for (int reg = 0; reg < NUM_REGS; reg++) {
-      if (state.dep[reg] != nullptr) {
-        resolve(block, (RegKind)reg);
-      }
-    }
+    delete (BlockState*)block->passData;
   }
 }

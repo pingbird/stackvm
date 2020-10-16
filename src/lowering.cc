@@ -50,20 +50,20 @@ struct Builder {
 
     b.pushGoto(blocks.cond);
 
-    b.setBlock(blocks.cond);
+    b.setBefore(blocks.cond);
     b.pushIf(
       b.pushLd(b.pushReg(reg)),
       blocks.loop,
       blocks.next
     );
 
-    b.setBlock(blocks.loop);
+    b.setBefore(blocks.loop);
     return blocks;
   }
 
   void closeLoop(LoopBlocks &blocks, IR::RegKind reg = IR::R_PTR) {
     b.pushGoto(blocks.cond);
-    b.setBlock(blocks.next);
+    b.setBefore(blocks.next);
     b.pushStr(b.pushReg(reg), b.pushImm(0));
   }
 

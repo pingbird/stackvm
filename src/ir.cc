@@ -26,8 +26,9 @@ const char *IR::regNames[2] = {
   "def",
 };
 
-void Inst::remove() {
+void Inst::detach() {
   assert(mounted);
+  assert(block != nullptr);
   mounted = false;
   if (prev == nullptr) {
     block->first = next;
@@ -47,6 +48,11 @@ void Inst::remove() {
   }
   next = nullptr;
   prev = nullptr;
+  block = nullptr;
+}
+
+void Inst::forceRemove() {
+  detach();
 
   for (Inst *input : inputs) {
     std::vector<Inst*> &v = input->outputs;
@@ -73,25 +79,36 @@ void Inst::remove() {
   }
 
   inputs.clear();
-
-  block = nullptr;
 }
 
-void Inst::safeRemove() {
+void Inst::remove() {
+  detach();
+
   assert(outputs.empty());
-  remove();
+
+  for (Inst *input : inputs) {
+    std::vector<Inst*> &v = input->outputs;
+    v.erase(
+      std::remove(
+        v.begin(),
+        v.end(),
+        this
+      ),
+      v.end()
+    );
+  }
+}
+
+void Inst::forceDestroy() {
+  if (mounted) {
+    forceRemove();
+  }
+  delete this;
 }
 
 void Inst::destroy() {
   if (mounted) {
     remove();
-  }
-  delete this;
-}
-
-void Inst::safeDestroy() {
-  if (mounted) {
-    safeRemove();
   }
   delete this;
 }
@@ -144,6 +161,16 @@ void Inst::insertBefore(Inst *inst) {
   prev = inst;
 }
 
+void Inst::moveAfter(Inst *inst) {
+  inst->detach();
+  insertAfter(inst);
+}
+
+void Inst::moveBefore(Inst *inst) {
+  inst->detach();
+  insertBefore(inst);
+}
+
 Inst::Inst(
   Block *block,
   InstKind kind,
@@ -156,6 +183,11 @@ Inst::Inst(
       inst->outputs.push_back(this);
     }
   }
+}
+
+void Inst::addInput(Inst *input) {
+  inputs.push_back(input);
+  input->outputs.push_back(this);
 }
 
 Block::Block(Graph *graph) : graph(graph) {
@@ -199,6 +231,16 @@ void Block::insertBefore(Inst *inst, Inst *before) {
   }
 }
 
+void Block::moveAfter(Inst *inst, Inst *after) {
+  inst->detach();
+  insertAfter(inst, after);
+}
+
+void Block::moveBefore(Inst *inst, Inst *before) {
+  inst->detach();
+  insertBefore(inst, before);
+}
+
 void Block::addSuccessor(Block *successor) {
   assert(!orphan);
   successors.push_back(successor);
@@ -209,14 +251,14 @@ std::string Block::getLabel() const {
   return std::string("l") + std::to_string(id);
 }
 
-void Block::remove() {
+void Block::destroy() {
   assert(!orphan);
   orphan = true;
   graph->orphanCount++;
   open = true;
 
   while (first != nullptr) {
-    first->destroy();
+    first->forceDestroy();
   }
 
   for (Block *predecessor : predecessors) {
@@ -262,15 +304,18 @@ bool Block::alwaysReaches(Block *block) {
     Block *cur = queue.back();
     visited.insert(cur);
     queue.pop_back();
-    if (cur->successors.empty()) {
-      // We hit an end node
-      return false;
-    }
-    for (Block *successor : cur->successors) {
-      if (successor == block) {
-        reaches = true;
-      } else if (!visited.contains(successor)) {
-        queue.push_back(successor);
+    if (cur == block) {
+      reaches = true;
+    } else {
+      if (cur->successors.empty()) {
+        // We hit an end node
+        return false;
+      }
+
+      for (Block *successor : cur->successors) {
+        if (!visited.contains(successor)) {
+          queue.push_back(successor);
+        }
       }
     }
   }
@@ -321,17 +366,20 @@ bool Block::alwaysReachedBy(Block *block) {
   bool reaches = false;
   while (!queue.empty()) {
     Block *cur = queue.back();
-    visited.insert(cur);
     queue.pop_back();
-    if (cur->successors.empty()) {
-      // We hit an end node
-      return false;
-    }
-    for (Block *predecessor : cur->predecessors) {
-      if (predecessor == block) {
-        reaches = true;
-      } else if (!visited.contains(predecessor)) {
-        queue.push_back(predecessor);
+    if (cur == block) {
+      reaches = true;
+    } else {
+      if (cur->predecessors.empty()) {
+        // We hit the entry node
+        return false;
+      }
+
+      for (Block *predecessor : cur->predecessors) {
+        if (!visited.contains(predecessor)) {
+          visited.insert(cur);
+          queue.push_back(predecessor);
+        }
       }
     }
   }
@@ -373,10 +421,11 @@ void Block::removeDominator() {
 bool Block::dominatedBy(Block *block) {
   if (block == nullptr || block == this) return true;
   if (dominator == nullptr) return false;
-  return dominator;
+  return dominator->dominatedBy(block);
 }
 
 bool Block::dominates(Block *block) {
+  if (block == nullptr) return false;
   return block->dominatedBy(this);
 }
 
@@ -391,7 +440,7 @@ void Graph::destroy() {
   assert(!destroyed);
 
   for (Block *block : blocks) {
-    if (!block->orphan) block->remove();
+    if (!block->orphan) block->destroy();
     block->graph = nullptr;
     delete block;
   }
@@ -472,19 +521,35 @@ Inst *Builder::pushIf(
   return closeBlock(I_IF, &inputs, &successors);
 }
 
-void Builder::setBlock(Block* newBlock) {
+void Builder::setAfter(Block *newBlock, Inst *after) {
   block = newBlock;
-  inst = block->last;
+  inst = after;
 }
 
-void Builder::setBlock(Block *newBlock, Inst *newInst) {
+void Builder::setAfter(Inst *after) {
+  assert(after != nullptr);
+  block = after->block;
+  inst = after;
+}
+
+void Builder::setBefore(Block *newBlock, Inst *before) {
   block = newBlock;
-  inst = newInst;
+  if (before == nullptr) {
+    inst = block->last;
+  } else {
+    inst = before->prev;
+  }
+}
+
+void Builder::setBefore(Inst *before) {
+  assert(before != nullptr);
+  block = before->block;
+  inst = before->prev;
 }
 
 Block *Builder::openBlock() {
   auto newBlock = new Block(&graph);
-  setBlock(newBlock);
+  setBefore(newBlock);
   return newBlock;
 }
 

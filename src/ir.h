@@ -141,17 +141,40 @@ namespace IR {
 
     void* passData = nullptr;
 
+    // Detaches this instruction without touching inputs and outputs.
+    void detach();
+
+    // Forcefully removes this instruction, unwiring all inputs and outputs.
+    void forceRemove();
+
+    // Removes this instruction without destroying it, unwiring inputs.
     void remove();
-    void safeRemove();
 
+    // Forcefully destroys this instruction, unwiring all inputs and outputs.
+    void forceDestroy();
+
+    // Destroys this instruction, only unwiring inputs.
     void destroy();
-    void safeDestroy();
 
+    void addInput(Inst *input);
+
+    // Safely destroys this instruction and inserts the provided one in its place.
     void replaceWith(Inst *inst);
+
+    // Destroys this instruction, rewiring any outputs to the new instruction.
     void rewriteWith(Inst *inst);
 
+    // Inserts the given instruction after itself.
     void insertAfter(Inst *inst);
+
+    // Moves the given instruction after itself.
+    void moveAfter(Inst *inst);
+
+    // Inserts the given instruction before itself.
     void insertBefore(Inst *inst);
+
+    // Move the given instruction before itself.
+    void moveBefore(Inst *inst);
   };
 
   struct Block {
@@ -171,9 +194,19 @@ namespace IR {
 
     void clearPassData();
 
-    void remove();
+    void destroy();
+
+    // Inserts [inst] after [after], where null is before the first instruction
     void insertAfter(Inst *inst, Inst *after);
+
+    // Inserts [inst] after [before], where null is after the last instruction
     void insertBefore(Inst *inst, Inst *before);
+
+    // Moves [inst] after [after], where null is before the first instruction
+    void moveAfter(Inst *inst, Inst *after);
+
+    // Moves [inst] before [before], where null is after the last instruction
+    void moveBefore(Inst *inst, Inst *before);
 
     std::vector<Block*> predecessors;
     std::vector<Block*> successors;
@@ -182,8 +215,10 @@ namespace IR {
 
     Block *getDominator();
 
+    // Whether this block is dominated by [block], including itself and null
     bool dominatedBy(Block *block);
 
+    // Whether this block dominates [block], including itself, but never null
     bool dominates(Block *block);
 
     void setDominator(Block *block);
@@ -191,9 +226,17 @@ namespace IR {
     void addSuccessor(Block *successor);
 
     void assignCommonDominator(Block *predecessor);
+
+    // Whether this block can ever reach the given block.
     bool reaches(Block *block);
+
+    // Whether this block can ever be reached by the given block.
     bool reachedBy(Block *block);
+
+    // Whether this block dominates the given block, without using the dominator tree.
     bool alwaysReaches(Block *block);
+
+    // Whether this block is dominated by the given block, without using the dominator tree.
     bool alwaysReachedBy(Block *block);
 
     [[nodiscard]] std::string getLabel() const;
@@ -232,8 +275,10 @@ namespace IR {
     Block *block = nullptr;
     Inst *inst = nullptr;
 
-    void setBlock(Block *newBlock);
-    void setBlock(Block *newBlock, Inst *newInst);
+    void setAfter(Block *newBlock, Inst *after = nullptr);
+    void setAfter(Inst *after);
+    void setBefore(Block *newBlock, Inst *before = nullptr);
+    void setBefore(Inst *before);
 
     Inst *push(
       InstKind kind,

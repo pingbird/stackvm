@@ -35,6 +35,8 @@ void Opt::validate(Graph &graph) {
     Inst *cur = block->first;
     while (cur != nullptr) {
       insts.push_back(cur);
+      // Make sure instruction is in current block
+      assert(cur->block == block);
       // Make sure there are no duplicates
       assert(!instIds.count(cur->id));
       instIds.insert(cur->id);
@@ -73,25 +75,8 @@ void Opt::validate(Graph &graph) {
 
     Inst *cur = block->first;
     while (cur != nullptr) {
-      for (Inst *input : cur->inputs) {
-        // Make sure input exists in graph
-        assert(instIds.count(input->id));
-        // Make sure we are an output of our inputs
-        auto &v = input->outputs;
-        assert(std::find(v.begin(), v.end(), cur) != v.end());
-      }
-
-      for (Inst *output : cur->outputs) {
-        // Make sure output exists in graph
-        assert(instIds.count(output->id));
-        // Make sure we are an input of our outputs
-        auto &v = output->inputs;
-        assert(std::find(v.begin(), v.end(), cur) != v.end());
-      }
-
-      // Make sure instruction is in its block
-      assert(cur->block == block);
       assert(cur->mounted);
+
       switch (cur->kind) {
         case I_NOP:
           assert(cur->inputs.empty());
@@ -134,6 +119,34 @@ void Opt::validate(Graph &graph) {
           assert(cur->next == nullptr);
           assert(block->successors.empty());
           break;
+      }
+
+      for (size_t i = 0; i < cur->inputs.size(); i++) {
+        Inst *input = cur->inputs[i];
+        assert(input != nullptr);
+
+        // Make sure input exists in graph
+        assert(instIds.count(input->id));
+        assert(input->mounted);
+        // Make sure we are an output of our inputs
+        auto &v = input->outputs;
+        assert(std::find(v.begin(), v.end(), cur) != v.end());
+
+        if (cur->kind == I_PHI) {
+          // Make sure phi input dominates predecessor
+          assert(block->predecessors[i]->alwaysReachedBy(input->block));
+        } else {
+          // Make sure input dominates uses
+          assert(block->alwaysReachedBy(input->block));
+        }
+      }
+
+      for (Inst *output : cur->outputs) {
+        // Make sure output exists in graph
+        assert(instIds.count(output->id));
+        // Make sure we are an input of our outputs
+        auto &v = output->inputs;
+        assert(std::find(v.begin(), v.end(), cur) != v.end());
       }
 
       cur = cur->next;
