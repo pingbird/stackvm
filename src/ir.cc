@@ -190,6 +190,12 @@ void Inst::addInput(Inst *input) {
   input->outputs.push_back(this);
 }
 
+void Inst::setComment(const std::string &newComment) {
+#ifndef NDEBUG
+  comment = newComment;
+#endif
+}
+
 Block::Block(Graph *graph) : graph(graph) {
   id = graph->nextBlockId++;
   graph->blocks.push_back(this);

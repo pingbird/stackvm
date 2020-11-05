@@ -55,6 +55,9 @@ bool validRange(Inst &inst, Inst *from, Inst *&upper) {
 }
 
 static bool shouldInline(Inst &inst, Inst &from) {
+#ifndef NDEBUG
+  if (!inst.comment.empty()) return false;
+#endif
   if (inst.kind == I_IMM) return true;
   if (inst.kind == I_PHI) return false;
   if (inst.outputs.size() > 1) return false;
@@ -65,6 +68,9 @@ static bool shouldInline(Inst &inst, Inst &from) {
 }
 
 static bool shouldOmit(Inst &inst) {
+#ifndef NDEBUG
+  if (!inst.comment.empty()) return false;
+#endif
   if (!instIsPure(inst.kind)) return false;
   for (Inst *output : inst.outputs) {
     if (!shouldInline(inst, *output)) return false;
@@ -152,7 +158,7 @@ std::string IR::printBlock(Block &block) {
   return str;
 }
 
-std::string IR::printInst(Inst &inst) {
+static std::string printInstBody(Inst &inst) {
   Block *block = inst.block;
   auto precedence = instPrecedence(inst.kind);
   SubCtx ctx = {&inst, precedence.lhs};
@@ -197,4 +203,14 @@ std::string IR::printInst(Inst &inst) {
         + inputStr({&inst, precedence.rhs}, 1);
   }
   return "unreachable";
+}
+
+std::string IR::printInst(Inst &inst) {
+  std::string out = printInstBody(inst);
+#ifndef NDEBUG
+  if (!inst.comment.empty()) {
+    out += " ; " + inst.comment;
+  }
+#endif
+  return out;
 }

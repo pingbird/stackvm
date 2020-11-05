@@ -134,6 +134,10 @@ namespace IR {
     std::vector<Inst*> inputs;
     std::vector<Inst*> outputs;
 
+#ifndef NDEBUG
+    std::string comment;
+#endif
+
     union {
       int64_t immValue;
       RegKind immReg;
@@ -175,6 +179,8 @@ namespace IR {
 
     // Move the given instruction before itself.
     void moveBefore(Inst *inst);
+
+    void setComment(const std::string& newComment);
   };
 
   struct Block {
