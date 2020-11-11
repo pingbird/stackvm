@@ -95,6 +95,7 @@ static Precedence instPrecedence(InstKind kind) {
     case I_STR:
       return {1, 1};
     case I_LD:
+    case I_RET:
       return {0, defaultPrecedence};
     default: return {defaultPrecedence, defaultPrecedence};
   }
@@ -192,7 +193,7 @@ static std::string printInstBody(Inst &inst) {
       " else ." +
       block->successors[1]->getLabel();
     case I_GOTO: return "goto ." + block->successors[0]->getLabel();
-    case I_RET: return "return";
+    case I_RET: return "return " + inputStr(ctx, 0);
     case I_GEP:
       auto r = inst.inputs[1];
       if (r->kind == I_IMM && r->immValue < 0) {

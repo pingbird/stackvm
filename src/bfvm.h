@@ -12,8 +12,9 @@ namespace BFVM {
     int cellWidth = 8;
     uint32_t eofValue = 0;
 #ifndef NDIAG
-    int profile = 0;
+    int profile = -1;
     bool quiet = false;
+    bool dontRun = false;
 #endif
   };
 

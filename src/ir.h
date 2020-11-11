@@ -4,6 +4,7 @@
 #include <set>
 #include <cassert>
 #include <unordered_set>
+#include <unordered_map>
 
 #include "bfvm.h"
 
@@ -160,7 +161,14 @@ namespace IR {
     // Destroys this instruction, only unwiring inputs.
     void destroy();
 
+    // Adds a brand new input
     void addInput(Inst *input);
+
+    // Removes a single occurrence of the specified output, without removing it as an input
+    void removeOutput(Inst *inst);
+
+    // Replaces the input at input with inst
+    void replaceInput(size_t input, Inst *inst);
 
     // Safely destroys this instruction and inserts the provided one in its place.
     void replaceWith(Inst *inst);

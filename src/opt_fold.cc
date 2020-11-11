@@ -1,14 +1,7 @@
-#include "opt_fold.h"
+#include "opt.h"
 
 using namespace IR;
 using namespace Opt;
-using namespace Opt::Fold;
-
-FoldRules *Opt::defaultFoldRules() {
-  auto rules = new FoldRules();
-
-  return rules;
-}
 
 bool Opt::equal(IR::Inst *a, IR::Inst *b) {
   if (a == b) return true;
@@ -45,16 +38,20 @@ bool Opt::equal(IR::Inst *a, IR::Inst *b) {
   abort();
 }
 
-void foldInst(FoldState &state, Inst *inst) {
+void foldInst(FoldState &state) {
+  Inst *inst = state.inst;
   size_t inputCount = inst->inputs.size();
   Inst *left = inputCount < 1 ? nullptr : inst->inputs[0];
   Inst *right = inputCount < 2 ? nullptr : inst->inputs[1];
-  InstKind leftKind = left == nullptr ? I_NOP : left->kind;
-  InstKind rightKind = right == nullptr ? I_NOP : right->kind;
-  FoldKey key = foldKey(inst->kind, leftKind, rightKind);
-  FoldKey lastKey = 0;
+  state.left = left;
+  state.right = right;
+  InstKind leftKind = inputCount < 1 ? I_NOP : left->kind;
+  InstKind rightKind = inputCount < 2 ? I_NOP : right->kind;
+  FoldKey key = {inst->kind, leftKind, rightKind};
+  uint64_t lastKey = 0;
+
   for (unsigned int i = 0; i < 4; i++) {
-    FoldKey maskedKey = key;
+    uint64_t maskedKey = key.value;
     if ((i & 1u) != 0) {
       maskedKey &= ~0xFFu;
     } else if ((i & 10u) != 0) {
@@ -62,17 +59,60 @@ void foldInst(FoldState &state, Inst *inst) {
     }
     if (maskedKey == lastKey) continue;
     lastKey = maskedKey;
-    if (state.rules->folders.count(maskedKey)) {
-      state.result = FR_NONE;
-      state.rules->folders[maskedKey](state);
-      break;
+    if (state.rules.folders.count(maskedKey)) {
+      state.b.setBefore(inst);
+      Inst *result = state.rules.folders.at(maskedKey)(state);
+
+      if (result == nullptr) {
+        // No match, continue
+        continue;
+      } else if (result == inst) {
+        // Instruction was modified in-place, retry fold
+        return foldInst(state);
+      } else {
+        // Done, rewrite
+        state.inst->rewriteWith(result);
+        return;
+      }
     }
   }
 }
 
-void fold(Graph &graph, FoldRules *rules) {
+void Opt::fold(Graph &graph, const FoldRules &rules) {
   FoldState state(graph, rules);
-  for (Block *b : graph.blocks) {
-    
+  for (Block *block : graph.blocks) {
+    state.inst = block->first;
+    while (state.inst != nullptr) {
+      Inst *next = state.inst->next;
+      foldInst(state);
+      state.inst = next;
+    }
   }
+}
+
+FoldRules Opt::standardFoldRules() {
+  FoldRules rules;
+
+  // Optimize GEP
+
+  rules.add({{I_GEP, I_GEP, I_IMM}}, [](FoldState &s) -> Inst* {
+    Inst *leftOperand = s.left->inputs[1];
+    if (leftOperand->kind == I_IMM) {
+      // i[imm x][imm y] -> i[x + y]
+      s.inst->replaceInput(0, s.left->inputs[0]);
+      s.inst->replaceInput(1, s.b.pushImm(s.right->immValue + leftOperand->immValue, T_SIZE));
+      return s.inst;
+    }
+    return nullptr;
+  });
+
+  rules.add({{I_GEP, I_NOP, I_IMM}}, [](FoldState &s) -> Inst* {
+    if (s.right->immValue == 0) {
+      // i[0] -> i
+      return s.left;
+    }
+    return nullptr;
+  });
+
+  return rules;
 }

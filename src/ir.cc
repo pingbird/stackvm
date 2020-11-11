@@ -88,6 +88,7 @@ void Inst::remove() {
 
   for (Inst *input : inputs) {
     std::vector<Inst*> &v = input->outputs;
+    // Remove ALL occurrences of this
     v.erase(
       std::remove(
         v.begin(),
@@ -113,7 +114,26 @@ void Inst::destroy() {
   delete this;
 }
 
+void Inst::removeOutput(Inst *inst) {
+  // Remove ONE occurrence of inst
+  auto iter = std::find(outputs.begin(), outputs.end(), inst);
+  assert(iter != outputs.end());
+  outputs.erase(iter);
+}
+
+void Inst::addInput(Inst *input) {
+  inputs.push_back(input);
+  input->outputs.push_back(this);
+}
+
+void Inst::replaceInput(size_t input, Inst *inst) {
+  inputs[input]->removeOutput(this);
+  inputs[input] = inst;
+  inst->outputs.push_back(this);
+}
+
 void Inst::replaceWith(Inst *inst) {
+  if (inst == this) return;
   Block *oldBlock = block;
   Inst *oldPrev = prev;
   destroy();
@@ -121,6 +141,8 @@ void Inst::replaceWith(Inst *inst) {
 }
 
 void Inst::rewriteWith(Inst *inst) {
+  assert(inst->mounted);
+  if (inst == this) return;
   for (Inst *output : outputs) {
     auto &i = output->inputs;
     std::replace(i.begin(), i.end(), this, inst);
@@ -183,11 +205,6 @@ Inst::Inst(
       inst->outputs.push_back(this);
     }
   }
-}
-
-void Inst::addInput(Inst *input) {
-  inputs.push_back(input);
-  input->outputs.push_back(this);
 }
 
 void Inst::setComment(const std::string &newComment) {

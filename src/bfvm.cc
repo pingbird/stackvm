@@ -164,12 +164,14 @@ struct CompileContext {
 
     DIAG_ARTIFACT("ir_unopt.txt", IR::printGraph(*graph))
 
+    Opt::validate(*graph);
     DIAG(eventStart, "Optimize")
     Opt::resolveRegs(*graph);
-    Opt::validate(*graph);
+    Opt::fold(*graph, Opt::standardFoldRules());
     DIAG(eventFinish, "Optimize")
 
     DIAG_ARTIFACT("ir.txt", IR::printGraph(*graph))
+    Opt::validate(*graph);
 
     return graph;
   }
@@ -191,28 +193,26 @@ struct CompileContext {
     IO io;
     io.eofValue = config.eofValue;
 #ifndef NDIAG
-    if (config.profile) {
-      Memory::Tape tape(config.memory);
-      io.inputState = IS_RECORDING;
-      {
+    if (config.profile >= 0) {
+      DIAG(log, "Doing " + std::to_string(config.profile) + " profile runs")
+      if (config.profile != 0) {
+        Memory::Tape tape(config.memory);
+        io.inputState = IS_RECORDING;
         DIAG(eventStart, "Dry run")
         handle(&io, tape.start);
         DIAG(eventFinish, "Dry run")
+        DIAG_ARTIFACT("input.txt", io.inputRecording)
+        DIAG_ARTIFACT("output.txt", io.outputRecording)
+
+        io.inputState = IS_READING;
+        DIAG(eventStart, "Batch")
+        for (int i = 0; i < config.profile; i++) {
+          tape.clear();
+          io.inputIndex = 0;
+          handle(&io, tape.start);
+        }
+        DIAG(eventFinish, "Batch")
       }
-
-      DIAG_ARTIFACT("input.txt", io.inputRecording)
-      DIAG_ARTIFACT("output.txt", io.outputRecording)
-
-      DIAG(log, "Doing " + std::to_string(config.profile) + " runs")
-
-      io.inputState = IS_READING;
-      DIAG(eventStart, "Batch")
-      for (int i = 0; i < config.profile; i++) {
-        tape.clear();
-        io.inputIndex = 0;
-        handle(&io, tape.start);
-      }
-      DIAG(eventFinish, "Batch")
     } else {
 #endif
       DIAG(eventStart, "Run")

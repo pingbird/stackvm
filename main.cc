@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     (option("-e", "--eof") & value("value", config.cellWidth)) % "value of getchar when eof is reached\ndefault = 0",
     (option("-m", "--memory") & value("size", memory)) % "how much virtual memory to reserve to the left and right\ndefault = 128MiB,128MiB",
 #ifndef NDIAG
-    (option("-p", "--profile") & value("count", config.profile)) % "enable profiling of build and execution",
+    (option("-p", "--profile") & value("count", config.profile)) % "do the specified number of profile runs",
     option("-q", "--quiet").set(config.quiet) % "suppress printing profiling info to the console",
     (option("-d", "--dump") & value("dir", config.dump)) % "dumps intermediates into the specified folder",
 #endif

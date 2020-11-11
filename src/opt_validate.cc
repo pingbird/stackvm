@@ -73,6 +73,8 @@ void Opt::validate(Graph &graph) {
       assert(std::find(v.begin(), v.end(), block) != v.end());
     }
 
+    std::unordered_set<Inst*> visited;
+
     Inst *cur = block->first;
     while (cur != nullptr) {
       assert(cur->mounted);
@@ -136,8 +138,13 @@ void Opt::validate(Graph &graph) {
           // Make sure phi input dominates predecessor
           assert(block->predecessors[i]->alwaysReachedBy(input->block));
         } else {
-          // Make sure input dominates uses
-          assert(block->alwaysReachedBy(input->block));
+          if (block == input->block) {
+            // Make sure input is before its use in same block
+            assert(visited.count(input));
+          } else {
+            // Make sure input dominates uses
+            assert(block->alwaysReachedBy(input->block));
+          }
         }
       }
 
@@ -149,6 +156,7 @@ void Opt::validate(Graph &graph) {
         assert(std::find(v.begin(), v.end(), cur) != v.end());
       }
 
+      visited.insert(cur);
       cur = cur->next;
     }
   }
