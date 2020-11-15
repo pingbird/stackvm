@@ -292,10 +292,6 @@ struct InterpreterImpl : public BFVM::Interpreter {
 
 BFVM::Interpreter::Interpreter() = default;
 
-std::unique_ptr<BFVM::Interpreter> BFVM::Interpreter::initialize(const BFVM::Config &config) {
-  return std::make_unique<InterpreterImpl>(config);
-}
-
 void BFVM::run(const std::string &code, const BFVM::Config &config) {
   InterpreterImpl interpreter(config);
   auto handle = interpreter.compile(code, "code");

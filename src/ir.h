@@ -69,20 +69,23 @@ namespace IR {
     }
   }
 
-  static int minType(TypeId x, TypeId y) {
+  // Returns the minimum compatible integer type of x and y
+  static TypeId minType(TypeId x, TypeId y) {
     if (x == y) return x;
     assert(x >= T_LOW && x <= T_HI);
     assert(y >= T_LOW && y <= T_HI);
     return x > y ? y : x;
   }
 
-  static int maxType(TypeId x, TypeId y) {
+  // Returns the maximum compatible integer type of x and y
+  static TypeId maxType(TypeId x, TypeId y) {
     if (x == y) return x;
     assert(x >= T_LOW && x <= T_HI);
     assert(y >= T_LOW && y <= T_HI);
     return x > y ? x : y;
   }
 
+  // Whether or not this instruction kind can be safely pruned
   static bool instIsPure(InstKind kind) {
     switch (kind) {
       case I_NOP:
@@ -99,13 +102,14 @@ namespace IR {
     }
   }
 
+  // Whether or not this instruction kind can be influenced by impure instructions
   static bool instIsOrd(InstKind kind) {
     switch (kind) {
       case I_LD:
       case I_REG:
         return true;
       default:
-        return false;
+        return !instIsPure(kind);
     }
   }
 
@@ -146,19 +150,19 @@ namespace IR {
 
     void* passData = nullptr;
 
-    // Detaches this instruction without touching inputs and outputs.
+    // Detaches this instruction without touching inputs and outputs
     void detach();
 
-    // Forcefully removes this instruction, unwiring all inputs and outputs.
+    // Forcefully removes this instruction, unwiring all inputs and outputs
     void forceRemove();
 
-    // Removes this instruction without destroying it, unwiring inputs.
+    // Removes this instruction without destroying it, unwiring inputs
     void remove();
 
-    // Forcefully destroys this instruction, unwiring all inputs and outputs.
+    // Forcefully destroys this instruction, unwiring all inputs and outputs
     void forceDestroy();
 
-    // Destroys this instruction, only unwiring inputs.
+    // Destroys this instruction, only unwiring inputs
     void destroy();
 
     // Adds a brand new input
@@ -170,24 +174,25 @@ namespace IR {
     // Replaces the input at input with inst
     void replaceInput(size_t input, Inst *inst);
 
-    // Safely destroys this instruction and inserts the provided one in its place.
+    // Safely destroys this instruction and inserts the provided one in its place
     void replaceWith(Inst *inst);
 
-    // Destroys this instruction, rewiring any outputs to the new instruction.
+    // Destroys this instruction, rewiring any outputs to the new instruction
     void rewriteWith(Inst *inst);
 
-    // Inserts the given instruction after itself.
+    // Inserts the given instruction after itself
     void insertAfter(Inst *inst);
 
-    // Moves the given instruction after itself.
+    // Moves the given instruction after itself
     void moveAfter(Inst *inst);
 
-    // Inserts the given instruction before itself.
+    // Inserts the given instruction before itself
     void insertBefore(Inst *inst);
 
-    // Move the given instruction before itself.
+    // Move the given instruction before itself
     void moveBefore(Inst *inst);
 
+    // Sets a comment to be displayed next to this instruction, no-op in release mode
     void setComment(const std::string& newComment);
   };
 
@@ -208,6 +213,7 @@ namespace IR {
 
     void clearPassData();
 
+    // Frees all child instructions and marks this block as an orphan
     void destroy();
 
     // Inserts [inst] after [after], where null is before the first instruction
@@ -227,6 +233,7 @@ namespace IR {
 
     Block *dominator = nullptr;
 
+    // Gets the parent of this block in the dominator tree, generating the tree if it has not been built
     Block *getDominator();
 
     // Whether this block is dominated by [block], including itself and null
@@ -241,16 +248,16 @@ namespace IR {
 
     void assignCommonDominator(Block *predecessor);
 
-    // Whether this block can ever reach the given block.
+    // Whether this block can ever reach the given block
     bool reaches(Block *block);
 
-    // Whether this block can ever be reached by the given block.
+    // Whether this block can ever be reached by the given block
     bool reachedBy(Block *block);
 
-    // Whether this block dominates the given block, without using the dominator tree.
+    // Whether this block dominates the given block (without using the dominator tree)
     bool alwaysReaches(Block *block);
 
-    // Whether this block is dominated by the given block, without using the dominator tree.
+    // Whether this block is dominated by the given block (without using the dominator tree)
     bool alwaysReachedBy(Block *block);
 
     [[nodiscard]] std::string getLabel() const;

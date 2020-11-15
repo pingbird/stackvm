@@ -9,6 +9,7 @@
 #include "bfvm.h"
 
 namespace Backend::LLVM {
+  // Converts various printable llvm types to a std::string
   template<typename T>
   std::string printRaw(T &value) {
     std::string out;
@@ -57,9 +58,12 @@ namespace Backend::LLVM {
 
     void optimize();
 
+    // Gets the llvm type of an IR type
     llvm::Type *convertType(IR::TypeId typeId);
 
+    // Compiles this IR graph into the current llvm module
     void compileGraph(IR::Graph &graph, const std::string &name);
+
     void compileBlock(IR::Block &block);
     llvm::Value *compileInst(IR::Inst *inst);
     llvm::Value *getValue(IR::Inst *inst, llvm::Type *type = nullptr);

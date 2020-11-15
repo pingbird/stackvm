@@ -18,13 +18,13 @@ namespace BFVM {
 #endif
   };
 
+  // A public handle to a callable brainfuck function, compiled or otherwise
   struct Handle {
     virtual char* operator()(void*, char*) = 0;
     virtual ~Handle() = default;
   };
 
   struct Interpreter {
-    static std::unique_ptr<Interpreter> initialize(const Config &config);
     virtual std::unique_ptr<BFVM::Handle> compile(const std::string &code, const std::string &name) = 0;
     virtual void run(BFVM::Handle &handle) = 0;
   protected:
