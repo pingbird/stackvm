@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:pedantic/pedantic.dart';
@@ -8,9 +9,14 @@ import 'package:crypto/crypto.dart' as crypto;
 import 'package:csv/csv.dart' as csv;
 
 class BenchmarkResult {
-  BenchmarkResult({required this.time, required this.outputHash});
+  BenchmarkResult({
+    required this.time,
+    required this.totalTime,
+    required this.outputHash,
+  });
 
   final int time;
+  final int totalTime;
   final String outputHash;
 }
 
@@ -45,7 +51,7 @@ Future<BenchmarkResult?> runBenchmark({
   ]);
 
   unawaited(proc.stdout.drain());
-  final stderrFinish = proc.stderr.listen(stderr.write).asFuture();
+  final stderrFinish = proc.stderr.listen(stderr.add).asFuture();
   if (input != null) proc.stdin.add(input);
   await proc.stdin.flush();
   await proc.stdin.close();
@@ -88,8 +94,9 @@ Future<BenchmarkResult?> runBenchmark({
     }
   }
 
-  return BenchmarkResult(
+  return BenchmarkResult (
     time: (batchEnd - batchStart) ~/ batch,
+    totalTime: batchEnd - batchStart,
     outputHash: outputHash,
   );
 }
@@ -100,7 +107,7 @@ void main(List<String> args) async {
   var yamlData = loadYaml(yamlText);
 
   var res = await startLinuxProcess('make', ['-j', '12'], workingDirectory: 'cmake-build-release');
-  final stderrSub = res.stderr.listen(stderr.write);
+  final stderrSub = res.stderr.listen(stderr.add);
   unawaited(res.stdout.drain());
   final exitCode = await res.exitCode;
   if (exitCode != 0) {
@@ -110,8 +117,8 @@ void main(List<String> args) async {
   }
 
   var benchmarks = yamlData['benchmarks'] as YamlList;
-  for (var i = 0; i < benchmarks.length; i++) {
-    var benchmarkInfo = benchmarks[i];
+  for (var benchmark = 0; benchmark < benchmarks.length; benchmark++) {
+    var benchmarkInfo = benchmarks[benchmark];
     var name = benchmarkInfo['name'];
     var program = benchmarkInfo['src'];
     var input = Uint8List(0);
@@ -128,21 +135,33 @@ void main(List<String> args) async {
     int? batch = benchmarkInfo['batch'];
 
     if (batch == null) {
-      var res = await runBenchmark(
-        program: program,
-        input: input,
-        batch: 1,
-        width: width,
-      );
+      stderr.writeln('Calibrating $name...');
+      for (var i = 0;;i++) {
+        final profileBatch = pow(10, i).toInt();
+        var res = await runBenchmark(
+          program: program,
+          input: input,
+          batch: profileBatch,
+          width: width,
+        );
 
-      if (res == null) {
-        stderr.writeln("Benchmark '$name' timed out.");
-        exit(1);
+        if (res == null) {
+          stderr.writeln("Benchmark '$name' timed out.");
+          exit(1);
+        }
+
+        stderr.writeln('${profileBatch}x - ${res.time}ns');
+
+        const minNanoseconds = 10000000; // 10ms
+        const idealNanoseconds = 5000000000; // 5s
+
+        if (res.totalTime > minNanoseconds) {
+          batch = (idealNanoseconds / (res.totalTime / profileBatch)).ceil();
+          editor.update(['benchmarks', benchmark, 'batch'], batch);
+          stderr.writeln('new batch: $batch');
+          break;
+        }
       }
-
-      batch = (10000000000 / res.time).ceil();
-
-      editor.update(['benchmarks', i, 'batch'], batch);
     }
 
     var res = await runBenchmark(
@@ -161,14 +180,14 @@ void main(List<String> args) async {
     var outputHash = benchmarkInfo['output'];
 
     if (baseline == null) {
-      editor.update(['benchmarks', i, 'baseline'], res.time);
+      editor.update(['benchmarks', benchmark, 'baseline'], res.time);
     } else {
       var percentage = ((res.time / baseline) * 100).round() - 100;
       print('[$name] ${percentage < 0 ? '' : '+'}$percentage%');
     }
 
     if (outputHash == null) {
-      editor.update(['benchmarks', i, 'output'], res.outputHash);
+      editor.update(['benchmarks', benchmark, 'output'], res.outputHash);
     } else {
       if (outputHash != res.outputHash) {
         stderr.writeln('[$name] Output mismatch ${res.outputHash} vs $outputHash');
