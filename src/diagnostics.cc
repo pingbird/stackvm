@@ -48,9 +48,13 @@ std::string Util::Time::printTime(int64_t time, int64_t precision) {
   }
 }
 
-std::ofstream Util::openFile(const std::string &path) {
+std::ofstream Util::openFile(const std::string &path, bool binary) {
   std::ofstream file;
-  file.open(path);
+  auto mode = std::ios_base::out;
+  if (binary) {
+    mode |= std::ios_base::binary;
+  }
+  file.open(path, mode);
   if (!file.is_open()) {
     std::cerr << std::system_error(
       errno, std::system_category(), "Error: Failed to open \"" + path + "\""

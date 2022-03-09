@@ -123,7 +123,7 @@ namespace IR {
       const std::vector<Inst*> *inputs = nullptr
     );
 
-    int id;
+    unsigned int id;
 
     TypeId type = T_INVALID;
 

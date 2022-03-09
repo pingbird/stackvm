@@ -92,8 +92,9 @@ struct CommandLineDiag : Diag {
 
   void artifact(const std::string &name, const DiagCollector &contents) override {
     if (config.dump.empty()) return;
-    std::ofstream file = Util::openFile(config.dump + "/" + name);
-    file << contents();
+    std::ofstream file = Util::openFile(config.dump + "/" + name, true);
+	auto contentsStr = contents();
+	file.write(contentsStr.data(), contentsStr.size());
     file.close();
   }
 };
@@ -140,7 +141,7 @@ struct CompileContext {
           std::cerr << "Error: Failed to create output directory \"" + config.dump + "\"";
           exit(1);
         }
-        diag->timeline = Util::openFile(config.dump + "/timeline.txt");
+        diag->timeline = Util::openFile(config.dump + "/timeline.txt", false);
         diag->timeline << "Time,Event,Label" << "\r\n";
       }
     }
@@ -230,7 +231,7 @@ struct CompileContext {
     delete diag;
 #endif
   }
-};
+} __attribute__((aligned(32)));
 
 int bfGetchar(IO *io) {
 #ifndef NDIAG

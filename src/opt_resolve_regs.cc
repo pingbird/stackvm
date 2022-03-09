@@ -173,5 +173,6 @@ void Opt::resolveRegs(Graph &graph) {
   // Clean up BlockStates
   for (Block *block : graph.blocks) {
     delete (BlockState*)block->passData;
+    block->passData = nullptr;
   }
 }

@@ -45,4 +45,6 @@ namespace Opt {
 
   bool equal(IR::Inst *a, IR::Inst *b);
 
+  void optimizeLoops(IR::Graph &graph);
+  void optimizeCommonExpr(IR::Graph &graph);
 }

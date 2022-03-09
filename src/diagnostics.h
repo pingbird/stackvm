@@ -41,7 +41,7 @@ namespace Util {
     std::string printTime(int64_t ns, int64_t precision = second);
   }
 
-  std::ofstream openFile(const std::string &path);
+  std::ofstream openFile(const std::string &path, bool binary);
 
   std::string escapeCsvRow(std::string str);
 }

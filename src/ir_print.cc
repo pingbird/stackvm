@@ -4,6 +4,7 @@
 
 using namespace IR;
 
+// Check if there is an impure instruction between `from` (inclusive) and `to` (exclusive)
 bool impureBetween(Inst *from, Inst *to) {
   if (from == nullptr) return true;
   Inst *cur = from;

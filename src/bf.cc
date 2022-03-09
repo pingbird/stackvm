@@ -56,7 +56,7 @@ struct Parser {
             assert(str[pos] == ']');
             break;
           }
-          // Fall through
+          return loop;
         } case ']':
         case 0:
           return loop;
