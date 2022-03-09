@@ -45,7 +45,7 @@ Future<BenchmarkResult?> runBenchmark({
   ]);
 
   unawaited(proc.stdout.drain());
-  var stderrFinish = stderr.addStream(proc.stderr);
+  final stderrFinish = proc.stderr.listen(stderr.write).asFuture();
   if (input != null) proc.stdin.add(input);
   await proc.stdin.flush();
   await proc.stdin.close();
@@ -53,7 +53,7 @@ Future<BenchmarkResult?> runBenchmark({
   int? exitCode;
 
   await Future.any([
-    Future.delayed(Duration(seconds: 20)),
+    Future.delayed(Duration(seconds: 60)),
     proc.exitCode.then((value) => exitCode = value),
   ]);
 
@@ -100,9 +100,12 @@ void main(List<String> args) async {
   var yamlData = loadYaml(yamlText);
 
   var res = await startLinuxProcess('make', ['-j', '12'], workingDirectory: 'cmake-build-release');
-  unawaited(stderr.addStream(res.stderr));
+  final stderrSub = res.stderr.listen(stderr.write);
   unawaited(res.stdout.drain());
-  if (await res.exitCode != 0) {
+  final exitCode = await res.exitCode;
+  if (exitCode != 0) {
+    await stderrSub.asFuture();
+    stderr.writeln('Error: make exited with status code $exitCode');
     exit(1);
   }
 
@@ -168,7 +171,7 @@ void main(List<String> args) async {
       editor.update(['benchmarks', i, 'output'], res.outputHash);
     } else {
       if (outputHash != res.outputHash) {
-        stderr.writeln('Output mismatch ${res.outputHash} vs $outputHash');
+        stderr.writeln('[$name] Output mismatch ${res.outputHash} vs $outputHash');
         exit(1);
       }
     }
