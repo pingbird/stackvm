@@ -19,17 +19,18 @@ JIT::Linker::Linker(
   context(context),
   resolver(createLegacyLookupResolver(
     session,
-    [this](llvm::StringRef name) -> llvm::JITSymbol {
+    [this](llvm::StringRef nameRef) -> llvm::JITSymbol {
+      auto name = nameRef.str();
       if (auto symbol = objectLayer.findSymbol(std::string(name), false)) {
         return symbol;
       } else if (auto error = symbol.takeError()) {
         return std::move(error);
       } if (auto address = llvm::RTDyldMemoryManager::getSymbolAddressInProcess(name)) {
-        return llvm::JITSymbol(address, llvm::JITSymbolFlags::Exported);
+        return {address, llvm::JITSymbolFlags::Exported};
       } else if (symbols.count(name)) {
-        return llvm::JITSymbol(symbols[name], llvm::JITSymbolFlags::Exported);
+        return {symbols[name], llvm::JITSymbolFlags::Exported};
       } else {
-        return llvm::JITSymbol(nullptr);
+        return {nullptr};
       }
     },
     [](llvm::Error error) {
@@ -59,12 +60,12 @@ std::string JIT::Linker::mangle(const std::string &name) {
 }
 
 llvm::orc::VModuleKey JIT::Linker::addModule(unique_ptr<llvm::Module> module) {
-  DIAG(eventStart, "Compile");
+  DIAG(eventStart, "Compile")
 
   auto key = session.allocateVModule();
   cantFail(compileLayer.addModule(key, std::move(module)));
 
-  DIAG(eventFinish, "Compile");
+  DIAG(eventFinish, "Compile")
 
   return key;
 }
