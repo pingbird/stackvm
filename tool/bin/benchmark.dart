@@ -8,21 +8,25 @@ import 'package:crypto/crypto.dart' as crypto;
 import 'package:csv/csv.dart' as csv;
 
 class BenchmarkResult {
-  int time;
-  int inst;
-  String outputHash;
+  BenchmarkResult({required this.time, required this.outputHash});
+
+  final int time;
+  final String outputHash;
 }
 
-Future<Process> startLinuxProcess(String command, List<String> args, {String workingDirectory}) {
+Future<Process> startLinuxProcess(String command, List<String> args, {String? workingDirectory}) {
+  if (workingDirectory != null && !Directory(workingDirectory).existsSync()) {
+    throw AssertionError('Working directory does not exist: $workingDirectory');
+  }
   return Process.start(Platform.isLinux ? command : 'wsl', [
     if (!Platform.isLinux) command,
     ...args,
   ], workingDirectory: workingDirectory);
 }
 
-Future<BenchmarkResult> runBenchmark({
-  String program,
-  Uint8List input,
+Future<BenchmarkResult?> runBenchmark({
+  required String program,
+  List<int>? input,
   int batch = 1,
   int width = 8
 }) async {
@@ -42,11 +46,11 @@ Future<BenchmarkResult> runBenchmark({
 
   unawaited(proc.stdout.drain());
   var stderrFinish = stderr.addStream(proc.stderr);
-  proc.stdin.add(input);
+  if (input != null) proc.stdin.add(input);
   await proc.stdin.flush();
   await proc.stdin.close();
 
-  int exitCode;
+  int? exitCode;
 
   await Future.any([
     Future.delayed(Duration(seconds: 20)),
@@ -65,8 +69,8 @@ Future<BenchmarkResult> runBenchmark({
   var outputHash = crypto.sha1.convert(await File('temp/output.txt').readAsBytes()).toString();
   var timeline = csv.CsvToListConverter().convert(await File('temp/timeline.txt').readAsString());
 
-  int batchStart;
-  int batchEnd;
+  late int batchStart;
+  late int batchEnd;
 
   for (var i = 1; i < timeline.length; i++) {
     var row = timeline[i];
@@ -84,9 +88,10 @@ Future<BenchmarkResult> runBenchmark({
     }
   }
 
-  return BenchmarkResult()
-    ..time = (batchEnd - batchStart) ~/ batch
-    ..outputHash = outputHash;
+  return BenchmarkResult(
+    time: (batchEnd - batchStart) ~/ batch,
+    outputHash: outputHash,
+  );
 }
 
 void main(List<String> args) async {
@@ -117,7 +122,7 @@ void main(List<String> args) async {
       input = await File(benchmarkInfo['input']).readAsBytes();
     }
 
-    int batch = benchmarkInfo['batch'];
+    int? batch = benchmarkInfo['batch'];
 
     if (batch == null) {
       var res = await runBenchmark(
@@ -128,7 +133,7 @@ void main(List<String> args) async {
       );
 
       if (res == null) {
-        stderr.writeln("Benchmark '${name}' timed out.");
+        stderr.writeln("Benchmark '$name' timed out.");
         exit(1);
       }
 
@@ -145,7 +150,7 @@ void main(List<String> args) async {
     );
 
     if (res == null) {
-      stderr.writeln("Benchmark '${name}' timed out.");
+      stderr.writeln("Benchmark '$name' timed out.");
       exit(1);
     }
 
@@ -156,14 +161,14 @@ void main(List<String> args) async {
       editor.update(['benchmarks', i, 'baseline'], res.time);
     } else {
       var percentage = ((res.time / baseline) * 100).round() - 100;
-      print('[$name] ${percentage < 0 ? '' : '+'}${percentage}%');
+      print('[$name] ${percentage < 0 ? '' : '+'}$percentage%');
     }
 
     if (outputHash == null) {
       editor.update(['benchmarks', i, 'output'], res.outputHash);
     } else {
       if (outputHash != res.outputHash) {
-        stderr.writeln('Output mismatch ${res.outputHash} vs ${outputHash}');
+        stderr.writeln('Output mismatch ${res.outputHash} vs $outputHash');
         exit(1);
       }
     }
