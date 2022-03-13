@@ -3,81 +3,59 @@ benchmarks:
     name: hello world
     src: samples/hello.b
     output: a0b65939670bc2c010f4d5d6a0b3e4e4590fb92b
-    batch: 46945466
-    baseline: 111
 
   -
     name: semihash
     src: samples/semihash.b
     input: samples/semihash.in
     output: 5ddd3bb20b4b20d7cb776adc9823f9286a5a9f96
-    batch: 2870
-    baseline: 1267185
 
   -
     name: harmonic
     src: samples/harmonic.b
     output: b6589fc6ab0dc82cf12099d1c2d40ab994e8410c
-    batch: 650176
-    baseline: 7438
 
   -
     name: 8 bit cell size
     src: samples/cell_size.b
     width: 8
     output: 94cfcfa4ce6f757b8211ef5a2882076d7fc4f7bd
-    batch: 146388207
-    baseline: 34
 
   -
     name: 16 bit cell size
     src: samples/cell_size.b
     width: 16
     output: d2bb3c52eaf4286637d9a3df1e6024c2aaeb7728
-    batch: 139989087
-    baseline: 35
 
   -
     name: 32 bit cell size
     src: samples/cell_size.b
     width: 32
     output: 85c954c43002504b11cc5e239de7c6d0cc96e522
-    batch: 160015413
-    baseline: 33
 
   -
     name: mandlebrot
     src: samples/mandlebrot.b
     output: b77a017f811831f0b74e0d69c08b78e620dbda2b
-    batch: 8
-    baseline: 675272993
 
   -
     width: 16
     name: synthetic alias
     src: samples/synthetic_alias.b
     output: 58a74e7d129257f8b0be51f9aa10f8cbb60db621
-    batch: 17768
-    baseline: 282086
 
   -
     name: self interpreter
     src: samples/self_interpreter.b
     input: samples/hello.b
     output: a0b65939670bc2c010f4d5d6a0b3e4e4590fb92b
-    batch: 11575
-    baseline: 437539
 
   -
     name: signed math
     src: samples/signedmath.b
     output: 6a0967cbc5595edf4ef606ea16ca9d314c76b8bc
-    batch: 1895747
-    baseline: 2508
 
   -
     name: sierpinski
     src: samples/sierpinski.b
     output: 74e24c1e949d69e2cd47c5905140cc068de61b9e
-    batch: 63
-    baseline: 80151435

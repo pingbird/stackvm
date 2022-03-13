@@ -93,8 +93,8 @@ struct CommandLineDiag : Diag {
   void artifact(const std::string &name, const DiagCollector &contents) override {
     if (config.dump.empty()) return;
     std::ofstream file = Util::openFile(config.dump + "/" + name, true);
-	auto contentsStr = contents();
-	file.write(contentsStr.data(), contentsStr.size());
+    auto contentsStr = contents();
+    file.write(contentsStr.data(), contentsStr.size());
     file.close();
   }
 };
@@ -117,6 +117,8 @@ struct IO {
   std::string outputRecording;
   InputState inputState = IS_NONE;
 #endif
+  FILE *inputFile;
+  FILE *outputFile;
   int eofValue = 0;
 };
 
@@ -139,7 +141,7 @@ struct CompileContext {
           !std::filesystem::create_directory(config.dump)
         ) {
           std::cerr << "Error: Failed to create output directory \"" + config.dump + "\"";
-          exit(1);
+          std::exit(1);
         }
         diag->timeline = Util::openFile(config.dump + "/timeline.txt", false);
         diag->timeline << "Time,Event,Label" << "\r\n";
@@ -192,6 +194,16 @@ struct CompileContext {
 
   void run(BFVM::Handle &handle) {
     IO io;
+    if (config.inputFile.empty()) {
+      io.inputFile = stdin;
+    } else {
+      io.inputFile = fopen(config.inputFile.c_str(), "r");
+    }
+    if (config.outputFile.empty()) {
+      io.outputFile = stdout;
+    } else {
+      io.outputFile = fopen(config.outputFile.c_str(), "w");
+    }
     io.eofValue = config.eofValue;
 #ifndef NDIAG
     if (config.profile >= 0) {
@@ -243,7 +255,7 @@ int bfGetchar(IO *io) {
         return io->inputRecording[io->inputIndex++];
       }
     case IS_RECORDING: {
-      int c = getchar();
+      int c = fgetc(io->inputFile);
       if (c == -1) {
         return io->eofValue;
       } else {
@@ -253,7 +265,7 @@ int bfGetchar(IO *io) {
     } default: break;
   }
 #endif
-  int c = getchar();
+  int c = fgetc(io->inputFile);
   if (c == -1) {
     return io->eofValue;
   } else {
@@ -261,15 +273,15 @@ int bfGetchar(IO *io) {
   }
 }
 
-void bfPutchar(IO *context, int x) {
+void bfPutchar(IO *io, int x) {
 #ifndef NDIAG
-  if (context->inputState == IS_READING) {
+  if (io->inputState == IS_READING) {
     return;
-  } else if (context->inputState == IS_RECORDING) {
-    context->outputRecording.push_back(x);
+  } else if (io->inputState == IS_RECORDING) {
+    io->outputRecording.push_back(x);
   }
 #endif
-  putchar(x);
+  fputc(x, io->outputFile);
 }
 
 struct InterpreterImpl : public BFVM::Interpreter {

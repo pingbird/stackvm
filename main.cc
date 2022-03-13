@@ -1,6 +1,5 @@
 #include <iostream>
 #include <string>
-#include <filesystem>
 #include <clipp.h>
 #include <fstream>
 
@@ -17,7 +16,7 @@ void printUsageAndExit(group &cli) {
 
   std::cerr << "Usage:\n" << usage_lines(cli, "stackvm", format) << std::endl;
   std::cerr << "Parameters:\n" << documentation(cli, format) << std::endl;
-  exit(1);
+  std::exit(1);
 }
 
 int main(int argc, char** argv) {
@@ -30,6 +29,8 @@ int main(int argc, char** argv) {
 
   auto cli = (
     option("-h", "--help").set(help) % "print this help message",
+    (option("-i", "--input") & value("file", config.inputFile)) % "the file to read from",
+    (option("-o", "--output") & value("file", config.outputFile)) % "the file to write to",
     (option("-w", "--width") & value("bits", config.cellWidth)) % "width of cells in bits\ndefault = 8",
     (option("-e", "--eof") & value("value", config.cellWidth)) % "value of getchar when eof is reached\ndefault = 0",
     (option("-m", "--memory") & value("size", memory)) % "how much virtual memory (in bytes) to reserve to the left and right\ndefault = 128MiB,128MiB",
@@ -71,7 +72,7 @@ int main(int argc, char** argv) {
     std::cerr << std::system_error(
       errno, std::system_category(), "Error: Failed to open \"" + program + "\""
     ).what() << std::endl;
-    exit(1);
+    std::exit(1);
   }
 
   std::stringstream contents;

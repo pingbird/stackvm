@@ -11,6 +11,8 @@ namespace BFVM {
     std::string dump;
     int cellWidth = 8;
     uint32_t eofValue = 0;
+    std::string inputFile;
+    std::string outputFile;
 #ifndef NDIAG
     int profile = -1;
     bool quiet = false;

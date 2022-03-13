@@ -11,7 +11,7 @@ Memory::Tape::Tape(const Config &config) : config(config) {
     base = static_cast<char*>(calloc(totalSize, 1));
     if (base == nullptr) {
       std::cerr << "Error: calloc failed, out of memory?" << std::endl;
-      exit(1);
+      std::exit(1);
     }
   } else {
     totalSize = ((config.sizeLeft + config.sizeRight) + (pageSize - 1)) & ~(pageSize - 1);
@@ -27,7 +27,7 @@ Memory::Tape::Tape(const Config &config) : config(config) {
 
     if (base == MAP_FAILED) {
       std::cerr << "Error: mmap failed (" << strerror(errno) << ")" << std::endl;
-      exit(1);
+      std::exit(1);
     }
   }
   start = base + config.sizeLeft;
@@ -39,7 +39,7 @@ Memory::Tape::~Tape() {
   } else {
     if (munmap(base, totalSize) != 0) {
       std::cerr << "Error: munmap failed (" << strerror(errno) << ")" << std::endl;
-      exit(1);
+      std::exit(1);
     }
   }
 }
@@ -59,7 +59,7 @@ void Memory::Tape::clear() {
 
     if (result != base) {
       std::cerr << "Error: mmap failed (" << std::strerror(errno) << ")" << std::endl;
-      exit(1);
+      std::exit(1);
     }
   }
 }
@@ -115,6 +115,6 @@ size_t Memory::parseSize(const std::string &str) {
     return size;
   } else {
     std::cerr << "Invalid argument: " << err << std::endl;
-    exit(1);
+    std::exit(1);
   }
 }

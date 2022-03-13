@@ -59,7 +59,7 @@ std::ofstream Util::openFile(const std::string &path, bool binary) {
     std::cerr << std::system_error(
       errno, std::system_category(), "Error: Failed to open \"" + path + "\""
     ).what() << std::endl;
-    exit(1);
+    std::exit(1);
   }
   return file;
 }
