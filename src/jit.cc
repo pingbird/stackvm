@@ -94,6 +94,21 @@ std::unique_ptr<BFVM::Handle> JIT::Pipeline::compile(IR::Graph &graph, const std
   DIAG_FWD(moduleCompiler)
   moduleCompiler.compileGraph(graph, name);
   DIAG_FWD(linker)
+
+#ifndef NDIAG
+  if (diag && diag->isDumping()) {
+    llvm::legacy::PassManager pass;
+    llvm::SmallString<0> out;
+    llvm::raw_svector_ostream destStream(out);
+    if (machine->addPassesToEmitFile(pass, destStream, nullptr, llvm::CGFT_AssemblyFile)) {
+      std::cerr << "llvm::TargetMachine.addPassesToEmitFile failed";
+      std::exit(1);
+    }
+    pass.run(*module);
+    diag->artifact("jit_module.asm", (std::string)out);
+  }
+#endif
+
   auto key = linker.addModule(std::move(module));
   return std::make_unique<Handle>(
     key,

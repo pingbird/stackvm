@@ -22,7 +22,7 @@ struct CommandLineDiag : Diag {
     if (!config.quiet) {
       std::cerr << "[ log    ] " << string << std::endl;
     }
-    if (!config.dump.empty()) {
+    if (isDumping()) {
       timeline
         << std::to_string(Util::Time::getTime())
         << ",log,"
@@ -36,7 +36,7 @@ struct CommandLineDiag : Diag {
     if (!config.quiet) {
       std::cerr << "[ event  ] " << name << std::endl;
     }
-    if (!config.dump.empty()) {
+    if (isDumping()) {
       timeline
         << std::to_string(Util::Time::getTime())
         << ",event,"
@@ -57,7 +57,7 @@ struct CommandLineDiag : Diag {
         << " " << name << std::endl;
     }
     events[name] = Util::Time::getTime();
-    if (!config.dump.empty()) {
+    if (isDumping()) {
       timeline
         << std::to_string(events[name])
         << ",start,"
@@ -80,7 +80,7 @@ struct CommandLineDiag : Diag {
         << Util::Time::printTime(endTime - events[name])
         << std::endl;
     }
-    if (!config.dump.empty()) {
+    if (isDumping()) {
       timeline
         << std::to_string(endTime)
         << ",finish,"
@@ -90,10 +90,19 @@ struct CommandLineDiag : Diag {
     events.erase(name);
   }
 
+  bool isDumping() override {
+    return !config.dump.empty();
+  }
+
   void artifact(const std::string &name, const DiagCollector &contents) override {
-    if (config.dump.empty()) return;
+    if (!isDumping()) return;
+    artifact(name, contents());
+  }
+
+  void artifact(const std::string &name, const std::string &contents) override {
+    if (!isDumping()) return;
     std::ofstream file = Util::openFile(config.dump + "/" + name, true);
-    auto contentsStr = contents();
+    auto contentsStr = contents;
     file.write(contentsStr.data(), contentsStr.size());
     file.close();
   }

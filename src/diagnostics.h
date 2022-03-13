@@ -9,11 +9,13 @@
 using DiagCollector = std::function<std::string()>;
 
 struct Diag {
-  virtual void log(const std::string& string) {}
-  virtual void event(const std::string& name) {}
-  virtual void eventStart(const std::string& name) {}
-  virtual void eventFinish(const std::string& name) {}
-  virtual void artifact(const std::string& name, const DiagCollector &contents) {}
+  virtual void log(const std::string &string) {}
+  virtual void event(const std::string &name) {}
+  virtual void eventStart(const std::string &name) {}
+  virtual void eventFinish(const std::string &name) {}
+  virtual void artifact(const std::string &name, const DiagCollector &contents) {}
+  virtual void artifact(const std::string &name, const std::string &contents) {}
+  virtual bool isDumping() { return false; }
 };
 
 #define DIAG(m, ...) if (diag) diag->m(__VA_ARGS__);
