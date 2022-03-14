@@ -8,7 +8,6 @@
 #include <llvm/IR/Mangler.h>
 #include <llvm/Passes/PassBuilder.h>
 #include <llvm/Transforms/IPO.h>
-#include <llvm/IR/LegacyPassManager.h>
 #include <llvm/Transforms/IPO/PassManagerBuilder.h>
 #include <llvm/Support/TargetRegistry.h>
 
