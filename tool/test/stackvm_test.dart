@@ -12,7 +12,7 @@ void main() async {
   await runMake(modes);
 
   for (final mode in modes) {
-    test('$mode', () async {
+    test('all benchmarks - $mode', () async {
       Future<void> runTest(dynamic benchmarkInfo) async {
         var res = await runBenchmark(
           name: benchmarkInfo['name'],

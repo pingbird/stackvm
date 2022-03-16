@@ -142,7 +142,7 @@ struct CompileContext {
 
   explicit CompileContext(const BFVM::Config &config) : config(config) {
 #ifndef NDIAG
-    if (config.profile || !config.dump.empty()) {
+    if (config.profile >= 0 || !config.dump.empty()) {
       diag = new CommandLineDiag(config);
       if (!config.dump.empty()) {
         if (

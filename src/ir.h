@@ -65,7 +65,8 @@ namespace IR {
       case 64:
         return T_I64;
       default:
-        abort();
+        std::cerr << "Error: Invalid cell width, must be 8, 16, 32, or 64" << std::endl;
+        std::exit(1);
     }
   }
 
