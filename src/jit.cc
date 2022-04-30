@@ -98,12 +98,6 @@ std::unique_ptr<BFVM::Handle> JIT::Pipeline::compile(IR::Graph &graph, const std
 #ifndef NDIAG
   if (diag && diag->isDumping()) {
     llvm::legacy::PassManager pass;
-    llvm::SmallString<0> jitModuleAsm;
-    llvm::raw_svector_ostream jitModuleAsmStream(jitModuleAsm);
-    if (machine->addPassesToEmitFile(pass, jitModuleAsmStream, nullptr, llvm::CGFT_AssemblyFile)) {
-      std::cerr << "llvm::TargetMachine.addPassesToEmitFile failed";
-      std::exit(1);
-    }
     llvm::SmallString<0> jitModuleObject;
     llvm::raw_svector_ostream jitModuleObjectStream(jitModuleObject);
     if (machine->addPassesToEmitFile(pass, jitModuleObjectStream, nullptr, llvm::CGFT_ObjectFile)) {
@@ -111,7 +105,6 @@ std::unique_ptr<BFVM::Handle> JIT::Pipeline::compile(IR::Graph &graph, const std
       std::exit(1);
     }
     pass.run(*module);
-    diag->artifact("jit_module.asm", (std::string)jitModuleAsm);
     diag->artifact("jit_module.o", (std::string)jitModuleObject);
   }
 #endif
