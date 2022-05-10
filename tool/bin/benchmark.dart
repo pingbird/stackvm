@@ -43,6 +43,7 @@ void main(List<String> args) async {
     if (batch == null) {
       stderr.writeln('Calibrating $benchmarkName...');
       for (var i = 0;;i++) {
+        // Exponentially increase number of rounds
         final profileBatch = pow(10, i).toInt();
         var res = await runBenchmark(
           name: benchmarkName,
@@ -62,7 +63,8 @@ void main(List<String> args) async {
         const minNanoseconds = 10000000; // 10ms
         const idealNanoseconds = 5000000000; // 5s
 
-        if (res.totalTime > minNanoseconds) {
+        // Continue running benchmark until we have at least 5 seconds of data
+        if (res.totalTime < minNanoseconds) {
           batch = (idealNanoseconds / (res.totalTime / profileBatch)).ceil();
           benchmarkRunData['batch'] = batch;
           stderr.writeln('new batch: $batch');

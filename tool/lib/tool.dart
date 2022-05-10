@@ -18,6 +18,7 @@ class BenchmarkResult {
 }
 
 Future<Process> startLinuxProcess(String command, List<String> args, {String? workingDirectory}) {
+  print('$command ${jsonEncode(args)}');
   if (workingDirectory != null && !Directory(workingDirectory).existsSync()) {
     throw AssertionError('Working directory does not exist: $workingDirectory');
   }
@@ -107,7 +108,7 @@ Future<BenchmarkResult?> runBenchmark({
     return null;
   } else if (exitCode != 0) {
     await stderrFinish;
-    stderr.writeln('stackvm failed with exit code $exitCode');
+    stderr.writeln('stackvm benchmark "$name" failed with exit code $exitCode');
     exit(1);
   }
 

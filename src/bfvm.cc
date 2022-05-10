@@ -316,6 +316,6 @@ BFVM::Interpreter::Interpreter() = default;
 
 void BFVM::run(const std::string &code, const BFVM::Config &config) {
   InterpreterImpl interpreter(config);
-  auto handle = interpreter.compile(code, "code");
+  auto handle = interpreter.compile(code, "code2");
   interpreter.run(*handle);
 }
